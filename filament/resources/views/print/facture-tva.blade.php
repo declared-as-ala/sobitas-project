@@ -1,63 +1,57 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Facture {{ $facture->numero ?? '' }}</title>
-</head>
-<body class="doc-a4-print @if(!empty($forPdf)) is-pdf-print @endif">
+{{--
+    FACTURE (TVA) — browser print (routes/web.php facture-tvas.print), PDF download
+    (DocumentPdfController::downloadFactureTva) and the e-mailed PDF (FactureTvaSent).
 
+    Layout: the bon de livraison's classic form, shared with the devis through
+    print/partials/classic-document. This file only PREPARES the data; every amount is the one the
+    previous design printed — InvoiceCalculator totals, the order pack / coupon / Protinas breakdown
+    with its residual rule, the delivery paid with Protinas, the coupon / manual remise split.
+--}}
 @php
     /* ── Context ──────────────────────────────────────────────── */
-    $coordonnee  = $coordonnee ?? $company ?? null;
-    $isPdf       = !empty($forPdf);
-    $fmt         = function($n) { return number_format((float)$n, 3, '.', ' '); };
+    $coordonnee = $coordonnee ?? $company ?? null;
+    $isPdf      = ! empty($forPdf);
 
-    /* ── Logo (base64 for PDF reliability) ───────────────────── */
-    $logoUrl = \App\Support\PrintLogo::resolve($coordonnee ?? null);
-
-    /* ── Totals ───────────────────────────────────────────────── */
-    if (!isset($calcTotals) && isset($facture, $details_facture)) {
-        $defaultTva = $coordonnee && isset($coordonnee->tva) ? (float)$coordonnee->tva : 19;
+    /* ── Totals (pre-computed by the caller, or recalculated the same way) ── */
+    if (! isset($calcTotals) && isset($facture, $details_facture)) {
+        $defaultTva = $coordonnee && isset($coordonnee->tva) ? (float) $coordonnee->tva : 19;
         $calcTotals = \App\Services\InvoiceCalculator::calculate(
             $details_facture->toArray(),
-            (float)($facture->remise ?? 0),
-            (float)($facture->timbre ?? 0),
+            (float) ($facture->remise ?? 0),
+            (float) ($facture->timbre ?? 0),
             $defaultTva
         );
     }
-    $ct = $calcTotals ?? [];
-    $totalHtBrut = (float)($ct['total_ht_brut'] ?? $facture->prix_ht ?? 0);
-    $totalRemise = (float)($ct['remise']         ?? $facture->remise ?? 0);
+    $ct          = $calcTotals ?? [];
+    $totalHtBrut = (float) ($ct['total_ht_brut'] ?? $facture->prix_ht ?? 0);
+    $totalRemise = (float) ($ct['remise'] ?? $facture->remise ?? 0);
 
     /* Coupon breakdown: remise = manual_remise + coupon_discount_ht (invariant) */
-    $couponDiscountHt = (float)($facture->discount_ht ?? 0);
+    $couponDiscountHt = (float) ($facture->discount_ht ?? 0);
     $manualRemise     = max(0.0, round($totalRemise - $couponDiscountHt, 3));
     $couponCode       = $facture->coupon_code_snapshot ?? null;
-    $sourceOrder = $facture->commande ?? null;
-    $orderPack = (float) ($sourceOrder?->pack_discount_ht ?? 0);
-    $orderCoupon = (float) ($sourceOrder?->discount_ht ?? 0);
-    $orderPoints = (float) ($sourceOrder?->points_discount_ht ?? 0);
+    $sourceOrder   = $facture->commande ?? null;
+    $orderPack     = (float) ($sourceOrder?->pack_discount_ht ?? 0);
+    $orderCoupon   = (float) ($sourceOrder?->discount_ht ?? 0);
+    $orderPoints   = (float) ($sourceOrder?->points_discount_ht ?? 0);
     $orderDiscount = $orderPack + $orderCoupon + $orderPoints;
     /*
      * The order's pack / coupon / Protinas lines replace this invoice's own remise rows only when
      * they reconcile with its remise. Anything above them prints as a plain 'Remise'; an invoice
      * whose remise is BELOW the order amounts prints its own remise rows as before.
      */
-    $orderResidual = round($totalRemise - $orderDiscount, 3);
+    $orderResidual      = round($totalRemise - $orderDiscount, 3);
     $showOrderBreakdown = $sourceOrder && $orderDiscount > 0 && $orderResidual >= -0.001;
-    $docDiscount = $orderDiscount + max(0, $orderResidual);
+    $docDiscount        = $orderDiscount + max(0, $orderResidual);
     // Protinas v3: delivery paid with Protinas — shown for the record, it nets to 0 on this invoice.
     $shipPaidProtinas = \App\Support\OrderCashOnDelivery::shippingPaidWithProtinasDt($sourceOrder);
 
     $baseImp     = round($totalHtBrut - $totalRemise, 3);
-    $totalTva    = (float)($ct['tva']            ?? $facture->tva ?? 0);
-    $totalTimbre = (float)($ct['timbre']         ?? $facture->timbre ?? 0);
-    $netAPayer   = (float)($ct['net_a_payer']    ?? $facture->prix_ttc ?? $facture->net_a_payer ?? 0);
-    $tvaRate     = (float)($coordonnee->tva ?? 19);
-    $tvaDisplay  = ($tvaRate == floor($tvaRate)) ? (int)$tvaRate : $tvaRate;
+    $totalTva    = (float) ($ct['tva'] ?? $facture->tva ?? 0);
+    $totalTimbre = (float) ($ct['timbre'] ?? $facture->timbre ?? 0);
+    $netAPayer   = (float) ($ct['net_a_payer'] ?? $facture->prix_ttc ?? $facture->net_a_payer ?? 0);
+    $totalTtc    = isset($ct['prix_ttc']) ? (float) $ct['prix_ttc'] : round($netAPayer - $totalTimbre, 3);
+    $tvaRate     = (float) ($coordonnee->tva ?? 19);
 
     /* ── Date ─────────────────────────────────────────────────── */
     $dateStr = $documentDate
@@ -65,716 +59,145 @@
             ? \Carbon\Carbon::parse($facture->date_facture)->format('d/m/Y')
             : ($facture->created_at?->format('d/m/Y') ?? ''));
 
-    /* ── Build rows ───────────────────────────────────────────── */
-    $rows = $invoice_rows ?? [];
-    if (empty($rows) && isset($details_facture)) {
-        $defTva = $tvaRate;
+    /* ── Rows (the caller's invoice_rows, else built the same way) ── */
+    $srcRows = $invoice_rows ?? [];
+    if (empty($srcRows) && isset($details_facture)) {
         foreach ($details_facture as $i => $d) {
-            $qte         = (int)($d->qte ?? $d->quantite ?? 0);
-            $pu_ht       = (float)($d->prix_unitaire ?? 0);
-            $tva_pct     = (float)($d->tva ?? $defTva);
-            $pu_ttc      = round($pu_ht * (1 + $tva_pct / 100), 3);
+            $qte         = (int) ($d->qte ?? $d->quantite ?? 0);
+            $pu_ht       = (float) ($d->prix_unitaire ?? 0);
+            $tva_pct     = (float) ($d->tva ?? $tvaRate);
             $total_ht    = round($pu_ht * $qte, 3);
             $montant_tva = round($total_ht * $tva_pct / 100, 3);
-            $total_ttc   = round($total_ht + $montant_tva, 3);
-            $rows[] = [
+            $srcRows[] = [
                 'index'       => $i + 1,
                 'produit'     => $d->product->designation_fr ?? '—',
                 'qte'         => $qte,
                 'pu_ht'       => $pu_ht,
-                'pu_ttc'      => $pu_ttc,
+                'pu_ttc'      => round($pu_ht * (1 + $tva_pct / 100), 3),
                 'total_ht'    => $total_ht,
                 'tva_pct'     => $tva_pct,
                 'montant_tva' => $montant_tva,
-                'total_ttc'   => $total_ttc,
+                'total_ttc'   => round($total_ht + $montant_tva, 3),
             ];
         }
     }
+    /*
+     * Defensive on purpose: the three callers do not build identical rows. FactureTvaSent (the
+     * e-mailed PDF) sends no 'montant_tva' — and the previous template read it unconditionally, an
+     * « Undefined array key » that aborts the render. Every derived figure falls back to the same
+     * formula the print route uses (TVA on the line HT, TTC = HT + TVA).
+     */
+    $rows = [];
+    foreach (array_values($srcRows) as $i => $r) {
+        $qte      = (float) ($r['qte'] ?? 0);
+        $puHt     = (float) ($r['pu_ht'] ?? 0);
+        $tvaPct   = (float) ($r['tva_pct'] ?? $tvaRate);
+        $totalHt  = (float) ($r['total_ht'] ?? round($puHt * $qte, 3));
+        $montTva  = (float) ($r['montant_tva'] ?? round($totalHt * $tvaPct / 100, 3));
+        $rows[] = [
+            'n'           => $r['index'] ?? $i + 1,
+            'produit'     => $r['produit'] ?? '—',
+            'qte'         => $r['qte'] ?? 0,
+            'pu_ht'       => $puHt,
+            'tva'         => $tvaPct,
+            'pu_ttc'      => (float) ($r['pu_ttc'] ?? round($puHt * (1 + $tvaPct / 100), 3)),
+            'total_ht'    => $totalHt,
+            'montant_tva' => $montTva,
+            'total_ttc'   => (float) ($r['total_ttc'] ?? round($totalHt + $montTva, 3)),
+        ];
+    }
+    $taxBuckets  = \App\Support\PrintTaxRecap::buckets($rows, $totalHtBrut, $totalRemise, $totalTva);
+    $singleRate  = count($taxBuckets) <= 1;
+    $rateLabel   = $singleRate && $taxBuckets !== [] ? array_key_first($taxBuckets) : $tvaRate;
+    $rateLabel   = ((float) $rateLabel == floor((float) $rateLabel)) ? (int) $rateLabel : (float) $rateLabel;
+
+    /* ── Totals table (same rows, same conditions as before) ──── */
+    // Raw share of the order's goods; each label rounds it ONCE, as the previous design did (1 decimal
+    // for the pack, 2 for the total) — rounding twice can move the pack label by 0.1 %.
+    $pct = fn (float $part): float => $sourceOrder && $sourceOrder->prix_ht > 0 ? $part / $sourceOrder->prix_ht * 100 : 0.0;
+    $totals = [['label' => 'Total H.T.', 'value' => $totalHtBrut]];
+    if ($showOrderBreakdown) {
+        if ($orderPack > 0) {
+            $totals[] = ['label' => 'Remise pack ('.round($pct($orderPack), 1).' %)', 'value' => $orderPack, 'sign' => '-'];
+        }
+        if ($sourceOrder->coupon_code_snapshot) {
+            $totals[] = ['label' => 'Code promo '.$sourceOrder->coupon_code_snapshot, 'value' => $orderCoupon, 'sign' => '-'];
+        }
+        if ($orderPoints > 0) {
+            $totals[] = ['label' => 'Protinas ('.\App\Support\OrderCashOnDelivery::goodsProtinasPoints($sourceOrder).' pts)', 'value' => $orderPoints, 'sign' => '-'];
+        }
+        if ($orderResidual > 0.001) {
+            $totals[] = ['label' => 'Remise', 'value' => $orderResidual, 'sign' => '-'];
+        }
+        $totals[] = ['label' => 'Total remises ('.round($pct($docDiscount), 2).' % des articles)', 'value' => $docDiscount];
+    }
+    if ($shipPaidProtinas > 0) {
+        $totals[] = ['label' => 'Livraison', 'value' => $shipPaidProtinas];
+        $totals[] = ['label' => 'Réglée en Protinas', 'value' => $shipPaidProtinas, 'sign' => '-'];
+    }
+    if ($manualRemise > 0 && ! $showOrderBreakdown) {
+        $totals[] = ['label' => 'Remise', 'value' => $manualRemise, 'sign' => '-'];
+    }
+    if ($couponDiscountHt > 0 && ! $showOrderBreakdown) {
+        $totals[] = ['label' => 'Code promo'.($couponCode ? ' ('.$couponCode.')' : ''), 'value' => $couponDiscountHt, 'sign' => '-'];
+    }
+    if ($totalRemise > 0) {
+        $totals[] = ['label' => 'Net H.T. (base imposable)', 'value' => $baseImp];
+    }
+    $totals[] = ['label' => $singleRate ? 'T.V.A ('.$rateLabel.' %)' : 'Total T.V.A', 'value' => $totalTva];
+    if ($totalTimbre > 0) {
+        $totals[] = ['label' => 'Total T.T.C.', 'value' => $totalTtc];
+        $totals[] = ['label' => 'Timbre fiscal', 'value' => $totalTimbre];
+    }
+    $totals[] = ['label' => 'Net à payer', 'value' => $netAPayer, 'grand' => true];
 
     /* ── Client ───────────────────────────────────────────────── */
     $printClient = $client ?? $facture->client ?? null;
+    $cPhones = array_values(array_filter([$printClient?->phone_1, $printClient?->phone_2]));
+
+    /* ── References for the remark box ───────────────────────────
+       « Réf. BL » printed the raw database id of the delivery note; the number on the BL itself is
+       what a reader can match, so it is preferred and the id stays the fallback. */
+    $blRef = null;
+    if (! empty($facture->facture_id)) {
+        $blRef = $facture->facture?->numero ?: $facture->facture_id;
+    }
+    $orderRef = $sourceOrder ? ($sourceOrder->numero ?: $sourceOrder->id) : ($facture->commande_id ?? null);
+
+    $doc = [
+        'kind'     => 'facture',
+        'title'    => 'Facture',
+        'numero'   => $facture->numero ?? '',
+        'date'     => $dateStr,
+        'isPdf'    => $isPdf,
+        'backUrl'  => $backUrl ?? null,
+        'company'  => $coordonnee,
+        'logoUrl'  => \App\Support\PrintLogo::sobitas($coordonnee ?? null),
+        'client'   => [
+            'code'    => $printClient?->code ?? $printClient?->id,
+            'name'    => $printClient?->name,
+            'address' => $printClient?->adresse,
+            'mf'      => $printClient?->matricule,
+            'ville'   => $printClient?->ville,
+            'phones'  => implode(' / ', $cPhones),
+            'email'   => $printClient?->email,
+        ],
+        // The business's own terms (DocumentPdfController's text), split: the mode in the heading,
+        // the request to quote the invoice number with the references below.
+        'payHead'  => 'Modalité de paiement : à réception, par virement ou en espèces',
+        'remarks'  => [
+            $blRef ? 'Réf. bon de livraison : '.$blRef : null,
+            $orderRef ? 'N° commande web : '.$orderRef : null,
+            'Merci de préciser le n° de facture lors du règlement.',
+        ],
+        'rows'       => $rows,
+        'taxBuckets' => $taxBuckets,
+        'totals'     => $totals,
+        'noteLead'   => 'Arrêtée la présente facture à la somme de :',
+        'words'      => \App\Support\AmountInWords::fr($netAPayer),
+        'extraNotes' => [],
+        'signLeft'   => null,
+        'signRight'  => 'Signature et Cachet',
+    ];
 @endphp
-
-@include('print.partials.styles-a4-bl-aligned', ['forPdf' => $isPdf])
-@include('print.partials.a4-ftva-footer-anchor-styles')
-
-<style>
-/* ═══════════════════════════════════════════════════════════════
-   FACTURE TVA — PREMIUM REDESIGN
-   2-column header | highlighted PU TTC | dominant Total TTC
-   ═══════════════════════════════════════════════════════════════ */
-
-/* ── Document wrapper ───────────────────────────────────────── */
-.ftva-page {
-    font-family: 'Segoe UI', Arial, sans-serif;
-    font-size: 9pt;
-    color: #1e293b;
-    max-width: 210mm;
-    margin: 0 auto;
-    padding: 12mm 18mm;
-    background: #fff;
-}
-
-/* ── 2-column header ────────────────────────────────────────── */
-.ftva-doc-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 24px;
-    margin-bottom: 20px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid #ff4000;
-}
-.ftva-header-company {
-    flex: 1;
-    min-width: 0;
-}
-.ftva-logo {
-    max-width: 160px;
-    height: auto;
-    display: block;
-    margin-bottom: 8px;
-}
-.ftva-co-name {
-    font-size: 13pt;
-    font-weight: 800;
-    color: #0f172a;
-    margin-bottom: 5px;
-    letter-spacing: -0.01em;
-}
-.ftva-co-line {
-    font-size: 8.5pt;
-    color: #475569;
-    line-height: 1.6;
-}
-.ftva-co-line b {
-    color: #0f172a;
-    font-weight: 600;
-}
-
-.ftva-header-right {
-    flex: 0 0 48%;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    align-items: flex-end;
-}
-
-/* ── Document meta box (title + number + date) ──────────────── */
-.ftva-doc-meta {
-    width: 100%;
-    background: #fff7ed;
-    border: 1.5px solid #ff4000;
-    border-radius: 8px;
-    padding: 12px 16px;
-    text-align: center;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-}
-.ftva-doc-meta h1 {
-    font-size: 20pt;
-    font-weight: 900;
-    color: #ff4000;
-    margin: 0 0 6px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-}
-.ftva-doc-meta-line {
-    font-size: 9pt;
-    color: #334155;
-    line-height: 1.7;
-}
-.ftva-doc-meta-line b {
-    color: #0f172a;
-    font-weight: 700;
-}
-
-/* ── Client block (right side) ──────────────────────────────── */
-.ftva-client-box {
-    width: 100%;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 12px 16px;
-    background: #f8fafc;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-}
-.ftva-client-box__label {
-    font-size: 7pt;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: #94a3b8;
-    margin-bottom: 6px;
-    padding-bottom: 5px;
-    border-bottom: 1px solid #e2e8f0;
-}
-.ftva-client-box__name {
-    font-size: 10.5pt;
-    font-weight: 700;
-    color: #0f172a;
-    margin-bottom: 4px;
-}
-.ftva-client-box__line {
-    font-size: 8.5pt;
-    color: #475569;
-    line-height: 1.55;
-}
-.ftva-client-box__line b {
-    color: #0f172a;
-    font-weight: 600;
-}
-
-/* ── 9-column table ─────────────────────────────────────────── */
-table.ftva-lines {
-    width: 100%;
-    border-collapse: collapse;
-    border-spacing: 0;
-    table-layout: fixed;
-    font-size: 8.5pt;
-    border: 1px solid #cbd5e1;
-    margin-top: 0;
-}
-table.ftva-lines col.c-num   { width: 4%; }
-table.ftva-lines col.c-prod  { width: 22%; }
-table.ftva-lines col.c-qty   { width: 5%; }
-table.ftva-lines col.c-puht  { width: 12%; }
-table.ftva-lines col.c-puttc { width: 12%; }
-table.ftva-lines col.c-tht   { width: 12%; }
-table.ftva-lines col.c-tva   { width: 6%; }
-table.ftva-lines col.c-mtva  { width: 11%; }
-table.ftva-lines col.c-tttc  { width: 16%; }
-
-table.ftva-lines thead {
-    display: table-header-group;
-}
-table.ftva-lines thead th {
-    background: #ff4000 !important;
-    background-color: #ff4000 !important;
-    color: #fff !important;
-    font-weight: 700;
-    font-size: 7.5pt;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    padding: 9px 7px;
-    vertical-align: middle;
-    border: none;
-    border-right: 1px solid rgba(255,255,255,0.2);
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-}
-table.ftva-lines thead th:last-child {
-    border-right: none;
-}
-
-/* PU TTC header — slightly darker accent */
-table.ftva-lines thead th.th-puttc {
-    background: #c2410c !important;
-    background-color: #c2410c !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-}
-
-/* Total TTC header — darkest accent */
-table.ftva-lines thead th.th-tttc {
-    background: #9a3412 !important;
-    background-color: #9a3412 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-}
-
-table.ftva-lines thead th.th-left   { text-align: left; }
-table.ftva-lines thead th.th-right  { text-align: right; padding-right: 8px; }
-table.ftva-lines thead th.th-center { text-align: center; }
-
-table.ftva-lines tbody td {
-    padding: 8px 7px;
-    border-bottom: 1px solid #f1f5f9;
-    border-right: 1px solid #f1f5f9;
-    vertical-align: middle;
-    font-size: 8.5pt;
-    color: #334155;
-    background: #fff;
-}
-table.ftva-lines tbody td:last-child {
-    border-right: none;
-}
-table.ftva-lines tbody tr:nth-child(even) td {
-    background: #f8fafc !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-}
-table.ftva-lines tbody tr:last-child td {
-    border-bottom: none;
-}
-
-table.ftva-lines td.td-num {
-    text-align: center;
-    color: #94a3b8;
-    font-weight: 700;
-    font-size: 8pt;
-}
-table.ftva-lines td.td-prod {
-    text-align: left;
-    font-weight: 400;
-    color: #0f172a;
-    word-break: break-word;
-    line-height: 1.4;
-}
-table.ftva-lines td.td-right {
-    text-align: right;
-    padding-right: 8px;
-    font-variant-numeric: tabular-nums;
-    color: #334155;
-    white-space: nowrap;
-}
-table.ftva-lines td.td-tva-pct {
-    text-align: center;
-    color: #64748b;
-    font-size: 8pt;
-}
-
-/* ── PU TTC highlighted column ──────────────────────────────── */
-table.ftva-lines td.td-puttc {
-    text-align: right;
-    padding-right: 8px;
-    font-variant-numeric: tabular-nums;
-    font-weight: 700;
-    color: #c2410c;
-    white-space: nowrap;
-    background: #fff7ed !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-}
-table.ftva-lines tbody tr:nth-child(even) td.td-puttc {
-    background: #ffedd5 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-}
-
-/* ── Total TTC — dominant ───────────────────────────────────── */
-table.ftva-lines td.td-ttc {
-    text-align: right;
-    padding-right: 8px;
-    font-variant-numeric: tabular-nums;
-    font-weight: 800;
-    color: #9a3412;
-    font-size: 9pt;
-    white-space: nowrap;
-}
-
-/* ── Totals summary (right-aligned) ────────────────────────── */
-.ftva-totals-outer {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 16px;
-    margin-bottom: 0;
-}
-table.ftva-totals {
-    width: 320px;
-    border-collapse: collapse;
-    font-size: 9.5pt;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    overflow: hidden;
-}
-table.ftva-totals td {
-    padding: 7px 14px;
-    border-bottom: 1px solid #f1f5f9;
-    vertical-align: middle;
-}
-table.ftva-totals td:first-child {
-    text-align: left;
-    color: #64748b;
-    font-weight: 500;
-    background: #f8fafc !important;
-    white-space: nowrap;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-}
-table.ftva-totals td:last-child {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-    font-weight: 600;
-    color: #0f172a;
-    min-width: 110px;
-    white-space: nowrap;
-}
-table.ftva-totals tr:last-child td {
-    border-bottom: none;
-}
-table.ftva-totals tr.row-grand td {
-    padding: 11px 14px;
-    border-top: 2px solid #ff4000;
-    border-bottom: none;
-    font-size: 11.5pt;
-    font-weight: 900;
-}
-table.ftva-totals tr.row-grand td:first-child {
-    color: #c2410c;
-    background: #fff7ed !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-}
-table.ftva-totals tr.row-grand td:last-child {
-    color: #c2410c;
-    font-size: 13pt;
-    background: #fff7ed !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-}
-
-/* ── Bottom section ─────────────────────────────────────────── */
-.ftva-bottom {
-    margin-top: 20px;
-    page-break-inside: avoid;
-    break-inside: avoid;
-}
-.ftva-separator {
-    border: none;
-    border-top: 1px solid #e2e8f0;
-    margin: 0 0 14px;
-}
-.ftva-note {
-    padding: 10px 14px;
-    border-left: 4px solid #ff4000;
-    background: #fffbeb !important;
-    border-radius: 0 6px 6px 0;
-    font-size: 9pt;
-    color: #334155;
-    line-height: 1.55;
-    margin-bottom: 14px;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-}
-.ftva-note strong {
-    display: block;
-    color: #c2410c;
-    font-size: 7.5pt;
-    text-transform: uppercase;
-    letter-spacing: 0.09em;
-    margin-bottom: 4px;
-}
-.ftva-sig-rib {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    margin-top: 6px;
-}
-.ftva-rib {
-    font-size: 9.5pt;
-    color: #334155;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-}
-.ftva-rib span {
-    color: #ff4000;
-    font-weight: 700;
-    text-transform: uppercase;
-    font-size: 8pt;
-    margin-right: 4px;
-}
-.ftva-signature {
-    text-align: right;
-}
-.ftva-signature__box {
-    display: inline-block;
-    width: 180px;
-    border-top: 1px solid #94a3b8;
-    padding-top: 6px;
-    text-align: center;
-    font-size: 8.5pt;
-    font-weight: 600;
-    color: #0f172a;
-}
-
-/* ── Print overrides ────────────────────────────────────────── */
-@media print {
-    @page { size: A4 portrait; margin: 10mm 18mm; }
-    body { background: #fff !important; }
-    .ftva-page { padding: 0 !important; max-width: none !important; }
-    .doc-a4-toolbar { display: none !important; }
-    table.ftva-lines thead,
-    table.ftva-lines thead th,
-    table.ftva-lines thead th.th-puttc,
-    table.ftva-lines thead th.th-tttc,
-    table.ftva-lines tbody tr:nth-child(even) td,
-    table.ftva-lines tbody td.td-puttc,
-    table.ftva-lines tbody tr:nth-child(even) td.td-puttc,
-    table.ftva-totals td:first-child,
-    table.ftva-totals tr.row-grand td,
-    .ftva-doc-meta,
-    .ftva-client-box,
-    .ftva-note {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-    .ftva-bottom {
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
-    }
-}
-</style>
-
-{{-- ═══════════════════════════════════════════════════════════════ --}}
-{{-- DOCUMENT                                                         --}}
-{{-- ═══════════════════════════════════════════════════════════════ --}}
-<div class="page-content">
-<div id="invoice">
-
-@if(!$isPdf)
-<div class="doc-a4-toolbar hide_print" style="text-align:center;padding:10px 0 16px;display:flex;gap:8px;justify-content:center;">
-    <button type="button" class="doc-a4-btn" onclick="window.print()">Imprimer</button>
-    <a class="doc-a4-btn doc-a4-btn--muted" href="{{ $backUrl ?? url()->previous() }}">← Retour</a>
-</div>
-@endif
-
-<div class="ftva-page ftva-page--footer-anchor">
-
-{{-- ── 2-COLUMN HEADER ─────────────────────────────────────────── --}}
-<header class="ftva-doc-header">
-
-    {{-- LEFT: Company info --}}
-    <div class="ftva-header-company">
-        @if($logoUrl)
-            <img src="{{ $logoUrl }}" alt="Logo" class="ftva-logo">
-        @endif
-        <div class="ftva-co-name">{{ $coordonnee->abbreviation ?? $coordonnee->designation_fr ?? '' }}</div>
-        @if(!empty($coordonnee->email))
-            <div class="ftva-co-line"><b>Email :</b> {{ $coordonnee->email }}</div>
-        @endif
-        @if(!empty($coordonnee->adresse_fr))
-            <div class="ftva-co-line"><b>Adresse :</b> {{ $coordonnee->adresse_fr }}</div>
-        @endif
-        @if(!empty($coordonnee->phone_1))
-            <div class="ftva-co-line"><b>Tél :</b> {{ $coordonnee->phone_1 }}{{ !empty($coordonnee->phone_2) ? ' / '.$coordonnee->phone_2 : '' }}</div>
-        @endif
-        @if(!empty($coordonnee->registre_commerce))
-            <div class="ftva-co-line"><b>RC :</b> {{ $coordonnee->registre_commerce }}</div>
-        @endif
-        @if(!empty($coordonnee->matricule))
-            <div class="ftva-co-line"><b>MF :</b> {{ $coordonnee->matricule }}</div>
-        @endif
-    </div>
-
-    {{-- RIGHT: Doc meta + Client --}}
-    <div class="ftva-header-right">
-
-        {{-- Document meta box --}}
-        <div class="ftva-doc-meta">
-            <h1>FACTURE</h1>
-            <div class="ftva-doc-meta-line"><b>N° :</b> {{ $facture->numero ?? '' }}</div>
-            <div class="ftva-doc-meta-line"><b>Date :</b> {{ $dateStr }}</div>
-            @if(isset($facture->facture_id) && $facture->facture_id)
-                <div class="ftva-doc-meta-line"><b>Réf. BL :</b> {{ $facture->facture_id }}</div>
-            @endif
-        </div>
-
-        {{-- Client block --}}
-        @if($printClient)
-        <div class="ftva-client-box">
-            <div class="ftva-client-box__label">Destinataire</div>
-            <div class="ftva-client-box__name">{{ $printClient->name }}</div>
-            @if(!empty($printClient->adresse))
-                <div class="ftva-client-box__line"><b>Adresse :</b> {{ $printClient->adresse }}</div>
-            @endif
-            @if(!empty($printClient->matricule))
-                <div class="ftva-client-box__line"><b>MF :</b> {{ $printClient->matricule }}</div>
-            @endif
-            @if(!empty($printClient->phone_1))
-                <div class="ftva-client-box__line"><b>Tél :</b> {{ $printClient->phone_1 }}</div>
-            @endif
-        </div>
-        @endif
-
-    </div>
-</header>
-
-{{-- ── PRODUCTS TABLE (9 columns) ──────────────────────────────── --}}
-<div style="margin-top:4px;">
-<table class="ftva-lines">
-    <colgroup>
-        <col class="c-num">
-        <col class="c-prod">
-        <col class="c-qty">
-        <col class="c-puht">
-        <col class="c-puttc">
-        <col class="c-tht">
-        <col class="c-tva">
-        <col class="c-mtva">
-        <col class="c-tttc">
-    </colgroup>
-    <thead>
-        <tr>
-            <th class="th-center">#</th>
-            <th class="th-left">Désignation</th>
-            <th class="th-center">Qté</th>
-            <th class="th-right">PU HT</th>
-            <th class="th-right th-puttc">PU TTC</th>
-            <th class="th-right">Total HT</th>
-            <th class="th-center">TVA</th>
-            <th class="th-right">Mnt TVA</th>
-            <th class="th-right th-tttc">Total TTC</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach($rows as $row)
-        <tr>
-            <td class="td-num">{{ $row['index'] }}</td>
-            <td class="td-prod">{{ $row['produit'] }}</td>
-            <td class="td-right" style="text-align:center;">{{ $row['qte'] }}</td>
-            <td class="td-right">{{ $fmt($row['pu_ht']) }}</td>
-            <td class="td-puttc">{{ $fmt($row['pu_ttc']) }}</td>
-            <td class="td-right">{{ $fmt($row['total_ht']) }}</td>
-            <td class="td-tva-pct">{{ $row['tva_pct'] }}&nbsp;%</td>
-            <td class="td-right">{{ $fmt($row['montant_tva']) }}</td>
-            <td class="td-ttc">{{ $fmt($row['total_ttc']) }}</td>
-        </tr>
-        @endforeach
-        @if(empty($rows))
-        <tr>
-            <td colspan="9" style="text-align:center;padding:16px;color:#94a3b8;font-style:italic;">
-                Aucune ligne de produit.
-            </td>
-        </tr>
-        @endif
-    </tbody>
-</table>
-</div>
-
-{{-- ── TOTALS BLOCK ─────────────────────────────────────────────── --}}
-<div class="ftva-totals-outer">
-    <table class="ftva-totals">
-        <tr>
-            <td>Total HT</td>
-            <td>{{ $fmt($totalHtBrut) }}&nbsp;DT</td>
-        </tr>
-        @if($showOrderBreakdown)
-            @if($orderPack > 0)<tr><td>Remise pack ({{ $sourceOrder->prix_ht > 0 ? round($orderPack / $sourceOrder->prix_ht * 100, 1) : 0 }} %)</td><td>− {{ $fmt($orderPack) }}&nbsp;DT</td></tr>@endif
-            @if($sourceOrder->coupon_code_snapshot)<tr><td>Code promo {{ $sourceOrder->coupon_code_snapshot }}</td><td>− {{ $fmt($orderCoupon) }}&nbsp;DT</td></tr>@endif
-            @if($orderPoints > 0)<tr><td>Protinas ({{ \App\Support\OrderCashOnDelivery::goodsProtinasPoints($sourceOrder) }} pts)</td><td>− {{ $fmt($orderPoints) }}&nbsp;DT</td></tr>@endif
-            @if($orderResidual > 0.001)<tr><td>Remise</td><td>− {{ $fmt($orderResidual) }}&nbsp;DT</td></tr>@endif
-            <tr><td>Total remises ({{ $sourceOrder->prix_ht > 0 ? round($docDiscount / $sourceOrder->prix_ht * 100, 2) : 0 }} % des articles)</td><td>{{ $fmt($docDiscount) }}&nbsp;DT</td></tr>
-        @endif
-        @if($shipPaidProtinas > 0)
-        <tr><td>Livraison</td><td>{{ $fmt($shipPaidProtinas) }}&nbsp;DT</td></tr>
-        <tr><td>Réglée en Protinas</td><td>− {{ $fmt($shipPaidProtinas) }}&nbsp;DT</td></tr>
-        @endif
-        @if($manualRemise > 0 && ! $showOrderBreakdown)
-        <tr>
-            <td>Remise</td>
-            <td>− {{ $fmt($manualRemise) }}&nbsp;DT</td>
-        </tr>
-        @endif
-        @if($couponDiscountHt > 0 && ! $showOrderBreakdown)
-        <tr>
-            <td>Code promo{{ $couponCode ? ' (' . $couponCode . ')' : '' }}</td>
-            <td>− {{ $fmt($couponDiscountHt) }}&nbsp;DT</td>
-        </tr>
-        @endif
-        @if($totalRemise > 0)
-        <tr>
-            <td>Base imposable</td>
-            <td>{{ $fmt($baseImp) }}&nbsp;DT</td>
-        </tr>
-        @endif
-        <tr>
-            <td>TVA ({{ $tvaDisplay }}&nbsp;%)</td>
-            <td>{{ $fmt($totalTva) }}&nbsp;DT</td>
-        </tr>
-        @if($totalTimbre > 0)
-        <tr>
-            <td>Timbre fiscal</td>
-            <td>{{ $fmt($totalTimbre) }}&nbsp;DT</td>
-        </tr>
-        @endif
-        <tr class="row-grand">
-            <td>TOTAL TTC (Net à payer)</td>
-            <td>{{ $fmt($netAPayer) }}&nbsp;DT</td>
-        </tr>
-    </table>
-</div>
-
-{{-- ── BOTTOM (Note + RIB + Signature) ─────────────────────────── --}}
-<div class="ftva-bottom">
-    <hr class="ftva-separator">
-
-    <div class="ftva-note">
-        <strong>Note</strong>
-        Arrêtée la présente facture à la somme de :
-        <span id="ftva-words"><em style="color:#94a3b8;">calcul…</em></span>
-    </div>
-    <input type="hidden" id="ftva-total-val" value="{{ $netAPayer }}">
-
-    <div class="ftva-bottom__spacer" aria-hidden="true"></div>
-
-    <div class="ftva-sig-rib">
-        <div class="ftva-rib">
-            @if(!empty($coordonnee->rib))
-                <span>RIB :</span> {{ $coordonnee->rib }}
-            @endif
-        </div>
-        <div class="ftva-signature">
-            <div class="ftva-signature__box">Signature et cachet</div>
-        </div>
-    </div>
-</div>
-
-</div>{{-- ftva-page --}}
-</div>{{-- invoice --}}
-</div>{{-- page-content --}}
-
-{{-- ── Amount in words ─────────────────────────────────────────────── --}}
-<script>
-(function () {
-    var el    = document.getElementById('ftva-total-val');
-    var words = document.getElementById('ftva-words');
-    if (!el || !words) return;
-    var a = ['','un','deux','trois','quatre','cinq','six','sept','huit','neuf',
-             'dix','onze','douze','treize','quatorze','quinze','seize',
-             'dix-sept','dix-huit','dix-neuf'];
-    var b = ['','','vingt','trente','quarante','cinquante',
-             'soixante','soixante-dix','quatre-vingt','quatre-vingt-dix'];
-
-    function tens(n) {
-        if (n < 20) return a[n];
-        var hi = Math.floor(n / 10), lo = n % 10;
-        if (hi === 7 || hi === 9) { return b[hi] + (lo > 0 ? '-' + a[10 + lo] : (hi === 8 ? 's' : '')); }
-        return b[hi] + (lo > 0 ? '-' + a[lo] : (hi === 8 ? 's' : ''));
-    }
-    function hundreds(n) {
-        var h = Math.floor(n / 100), t = n % 100;
-        var s = '';
-        if (h > 1) s += a[h] + ' cent';
-        else if (h === 1) s += 'cent';
-        if (t > 0) s += (h > 0 ? ' ' : '') + tens(t);
-        else if (h > 1) s += 's';
-        return s.trim();
-    }
-    function toFr(num) {
-        num = Math.abs(num);
-        var dinars   = Math.floor(num);
-        var millimes = Math.round((num - dinars) * 1000);
-        var parts = [];
-        if (dinars === 0) { parts.push('zéro'); }
-        else {
-            var M = Math.floor(dinars / 1000000);
-            var K = Math.floor((dinars % 1000000) / 1000);
-            var R = dinars % 1000;
-            if (M > 0) parts.push(hundreds(M) + ' million' + (M > 1 ? 's' : ''));
-            if (K > 0) parts.push((K === 1 ? 'mille' : hundreds(K) + ' mille'));
-            if (R > 0) parts.push(hundreds(R));
-        }
-        var result = parts.join(' ') + ' dinar' + (dinars > 1 ? 's' : '');
-        if (millimes > 0) result += ' et ' + millimes + ' millime' + (millimes > 1 ? 's' : '');
-        return result.charAt(0).toUpperCase() + result.slice(1);
-    }
-
-    words.textContent = toFr(parseFloat(el.value) || 0);
-})();
-</script>
-
-</body>
-</html>
+@include('print.partials.classic-document', ['doc' => $doc])
