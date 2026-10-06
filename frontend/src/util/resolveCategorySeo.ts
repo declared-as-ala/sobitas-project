@@ -64,20 +64,42 @@ export type MergedCategorySeo = CategorySeoContent & {
   relatedCategorySlugs: string[];
 };
 
-export type CategoryStockFacts = { priceMin: number | null; priceMax?: number | null; inStockCount: number | null };
+/**
+ * Live facts a CMS or curated sentence may quote through a token. `productCount` ({nbProduits}) is
+ * the listing total: brand pages pass it, category pages do not, so a {nbProduits} sentence on a
+ * category page is dropped rather than printed.
+ */
+export type CategoryStockFacts = {
+  priceMin: number | null;
+  priceMax?: number | null;
+  inStockCount: number | null;
+  productCount?: number | null;
+};
 
-const CATEGORY_FACT_TOKEN = /\{(?:prixMin|prixMax|nbEnStock)\}/;
+const CATEGORY_FACT_TOKEN = /\{(?:prixMin|prixMax|nbEnStock|nbProduits)\}/;
 
 function unavailableFact(sentence: string, facts: CategoryStockFacts): boolean {
   return (sentence.includes('{prixMin}') && (!facts.priceMin || facts.priceMin <= 0 || facts.inStockCount === 0))
     || (sentence.includes('{prixMax}') && (!facts.priceMax || facts.priceMax <= 0 || facts.priceMax === facts.priceMin || facts.inStockCount === 0))
-    || (sentence.includes('{nbEnStock}') && (!facts.inStockCount || facts.inStockCount < 0));
+    || (sentence.includes('{nbEnStock}') && (!facts.inStockCount || facts.inStockCount < 0))
+    || (sentence.includes('{nbProduits}') && (!facts.productCount || facts.productCount <= 0));
 }
 
+/*
+ * A count token followed by its noun agrees with the count: « {nbEnStock} produits en stock » with
+ * ONE in stock printed « 1 produits en stock » in the meta description of /c4-cellucor (live,
+ * 06/10/2026). Only the noun written right after the token is touched, never free text.
+ */
+const COUNTED_NOUN = /\{(nbEnStock|nbProduits)\} (produit|référence|fiche)s(?![\p{L}\p{N}])/gu;
+
 function replaceCategoryFacts(value: string, facts: CategoryStockFacts): string {
-  return value.replaceAll('{prixMin}', String(facts.priceMin))
+  return value
+    .replace(COUNTED_NOUN, (match, token: string, noun: string) =>
+      (token === 'nbEnStock' ? facts.inStockCount : facts.productCount) === 1 ? `{${token}} ${noun}` : match)
+    .replaceAll('{prixMin}', String(facts.priceMin))
     .replaceAll('{prixMax}', String(facts.priceMax))
-    .replaceAll('{nbEnStock}', String(facts.inStockCount));
+    .replaceAll('{nbEnStock}', String(facts.inStockCount))
+    .replaceAll('{nbProduits}', String(facts.productCount));
 }
 
 /** Resolve CMS fact tokens; drop an entire sentence when its fact cannot be established. */
@@ -102,10 +124,17 @@ export function resolveCategoryIntroHtml(intro: string, facts: CategoryStockFact
     tag ?? (CATEGORY_FACT_TOKEN.test(text ?? '') ? resolveCategoryMetaDescription(text ?? '', facts) : part));
 }
 
+/**
+ * Resolve the answers' tokens. A Q&A whose answer resolves to nothing (every sentence quoted a fact
+ * that is unknown today) is DROPPED: a question with an empty answer is not content, and FAQPage
+ * markup built from the same list would otherwise disagree with the page.
+ */
 export function resolveCategoryFaqs(
   faqs: Array<{ question: string; answer: string }>, facts: CategoryStockFacts
 ): Array<{ question: string; answer: string }> {
-  return faqs.map((faq) => ({ ...faq, answer: resolveCategoryMetaDescription(faq.answer, facts) }));
+  return faqs
+    .map((faq) => ({ ...faq, answer: resolveCategoryMetaDescription(faq.answer, facts) }))
+    .filter((faq) => faq.answer.trim() !== '');
 }
 
 function cleanString(value: unknown): string {

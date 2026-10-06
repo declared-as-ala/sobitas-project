@@ -1,153 +1,262 @@
 import { Metadata } from 'next';
 import { cache } from 'react';
-import { Section } from '@/app/components/layout/Section';
-import { ShopBreadcrumbs } from '@/app/components/ShopBreadcrumbs';
-import { getAllBrands, getInStockBrandCounts, getShopFacets } from '@/services/api';
+import { unstable_cache, unstable_noStore as noStore } from 'next/cache';
+import { getAllBrands, getShopFacets } from '@/services/api';
 import { loadForCache } from '@/util/loadForCache';
 import {
+  buildBrandSchema,
   buildBreadcrumbListSchema,
   buildCollectionPageSchema,
   buildFAQPageSchemaFromProductFaq,
-  buildItemListSchema,
 } from '@/util/structuredData';
-import { buildBrandEntries } from './brandEntries';
-import { brandFaq, BrandsPageContent } from './BrandsPageContent';
+import {
+  buildBrandEntries,
+  pickFeaturedBrands,
+  pickTextFeaturedBrands,
+  type BrandRow,
+} from './brandEntries';
+import { loadBrandRayons, loadBrandStock } from './brandRayons';
+import { BRANDS_H1, brandFaq, BrandsPageContent } from './BrandsPageContent';
 
-// ISR: the brand list changes rarely, so cache the server-rendered page. The three fetches below
-// therefore cost three queries an hour across all visitors, not three per visit.
+/*
+  `revalidate` is kept but does NOTHING today, and it must not be read as the page's caching:
+  i18n/request.ts reads headers(), which makes every route in the app dynamic, so this page is
+  rendered per request. The caching that actually exists is the `unstable_cache` entries below
+  and in brandRayons.ts — one hour each, tagged `brands` / `shop` / `products`.
+*/
 export const revalidate = 3600;
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
+const BASE_URL = (process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn').replace(/\/$/, '');
+const PAGE_PATH = '/brands';
+const CANONICAL = 'https://protein.tn/brands';
 
 /**
- * ── THE TITLE NAMES THE NUMBER, BECAUSE THE NUMBER IS THE REASON TO CLICK ──────────────────
- * The old title was "Marques — Compléments Alimentaires | Protéine Tunisie" and the description
- * listed three brands. A brand-index page competes on breadth: what a searcher wants to know
- * from the SERP is whether their brand is in there, and "570+" answers that better than any
- * three names can. The names still appear — after the count, where they are evidence rather
- * than the whole claim.
+ * ── THE TITLE NAMES THE QUERY, NOT THE COUNT (05/10/2026) ──────────────────────────────────
+ * The previous title led with « Toutes nos marques — 578 marques de compléments ». Search Console
+ * says what this page actually ranks for: #5 on `marques protéine tunisie` and on
+ * `marques nutrition sportive tunisie` (gl=tn, hl=fr). The title now carries both phrases, and
+ * it is a FIXED string — 61 characters, no number that shifts every time a brand is published.
+ * The count moved to the description, after four names a searcher recognises, which is where it
+ * is evidence rather than the whole claim. `marques whey tunisie` and `marques compléments
+ * alimentaires tunisie` are category and parapharmacy intent and are deliberately not chased.
+ */
+const TITLE = 'Marques protéine & nutrition sportive en Tunisie | Protein.tn';
+
+function buildDescription(brandCount: number): string {
+  const lead = 'Optimum Nutrition, Dymatize, BioTech USA, MuscleTech…';
+  const subject =
+    brandCount > 0
+      ? `${brandCount} marques de protéines et compléments en Tunisie`
+      : 'Les marques de protéines et compléments en Tunisie';
+  // 153 characters at 578 brands; four-digit counts stay at 154.
+  return `${lead} ${subject}, classées de A à Z et par rayon. Prix en dinars.`;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────────────────────
+ * DATA
+ * ───────────────────────────────────────────────────────────────────────────────────────────── */
+
+/** Exactly what the page reads from /all_brands and /shop_facets — the cached shape. */
+type BrandsIndex = {
+  brands: BrandRow[];
+  brandCounts: Record<string, number>;
+  totalPublished: number;
+};
+
+const EMPTY_INDEX: BrandsIndex = { brands: [], brandCounts: {}, totalPublished: 0 };
+
+/**
+ * A complete brand list whose facet counts did not arrive. Thrown — so unstable_cache stores
+ * nothing — but carrying the list, so this ONE render can still show every brand (without counts)
+ * instead of falling all the way back to an empty page.
+ */
+class DegradedBrandsIndex extends Error {
+  constructor(readonly index: BrandsIndex) {
+    super('/shop_facets returned no brand_counts');
+    this.name = 'DegradedBrandsIndex';
+  }
+}
+
+/**
+ * The brand list and the facet counts, projected to the four fields the page reads (~25 KB
+ * cached rather than ~140 KB of raw rows and facets).
+ *
+ * ── NOTHING EMPTY OR HALF-EMPTY IS EVER CACHED ──────────────────────────────────────────────
+ * An empty brand list THROWS (the util/brandIndex.ts pattern): unstable_cache stores nothing,
+ * loadForCache below marks the render uncached, and the next request tries again. A list with no
+ * facet counts throws too, as DegradedBrandsIndex — /shop_facets fails soft to `{}`, and caching
+ * that for an hour would show every brand with no count and re-list the empty brands the counts
+ * exist to filter out.
+ */
+async function readBrandsIndex(): Promise<BrandsIndex> {
+  const [brands, facets] = await Promise.all([getAllBrands(), getShopFacets()]);
+  if (!Array.isArray(brands) || brands.length === 0) {
+    throw new Error('[brands] /all_brands returned no rows — not caching an empty directory');
+  }
+  const index: BrandsIndex = {
+    brands: brands.map(({ id, designation_fr, logo }) => ({ id, designation_fr, logo: logo || null })),
+    brandCounts: facets?.brand_counts ?? {},
+    totalPublished: Number(facets?.total_published ?? 0) || 0,
+  };
+  if (Object.keys(index.brandCounts).length === 0) throw new DegradedBrandsIndex(index);
+  return index;
+}
+
+/*
+  Before this, every view made 9 uncached API calls — six pages of /all_brands, /shop_facets and
+  two pages of the in-stock index — for a TTFB of 0.49–0.74 s. Now it is one cache read for the
+  list and counts, and one (loadBrandStock, brandRayons.ts) for the stock maps that both the
+  directory and the rayon cards use: the in-stock index is read once an hour, not twice a view.
+*/
+const cachedBrandsIndex = unstable_cache(readBrandsIndex, ['brands-index-v2'], {
+  revalidate: 3600,
+  tags: ['brands', 'shop', 'products'],
+});
+
+async function loadBrandsIndex(): Promise<BrandsIndex> {
+  try {
+    return await cachedBrandsIndex();
+  } catch (err) {
+    if (err instanceof DegradedBrandsIndex) {
+      noStore();
+      console.error('[brands] rendering without facet counts, uncached:', err.message);
+      return err.index;
+    }
+    throw err;
+  }
+}
+
+/**
+ * Per-request dedupe: generateMetadata and the page both need the directory, and React `cache()`
+ * makes that one read. `loadForCache` stays the outer guard — a brand-list failure renders the
+ * empty fallback uncached instead of throwing the page away.
  */
 const loadDirectory = cache(async () => {
-  const [brands, facets, stockCounts] = await Promise.all([
-    loadForCache(() => getAllBrands(), [] as Awaited<ReturnType<typeof getAllBrands>>),
-    getShopFacets().catch(() => null),
-    getInStockBrandCounts().catch(() => ({} as Record<number, number>)),
+  const [index, stock] = await Promise.all([
+    loadForCache(() => loadBrandsIndex(), EMPTY_INDEX),
+    loadBrandStock(),
   ]);
-  return { ...buildBrandEntries(brands, facets?.brand_counts ?? {}, stockCounts), facets };
+  return {
+    ...buildBrandEntries(index.brands, index.brandCounts, stock.byBrand),
+    totalProducts: index.totalPublished,
+    stock,
+  };
 });
+
+/* ─────────────────────────────────────────────────────────────────────────────────────────────
+ * METADATA
+ * ───────────────────────────────────────────────────────────────────────────────────────────── */
 
 export async function generateMetadata(): Promise<Metadata> {
   const { entries } = await loadDirectory();
-  const count = entries.length;
-  const title = `Toutes nos marques — ${count} marques de compléments | Protein.tn`;
-  const description = `Répertoire A–Z de ${count} marques de compléments alimentaires disponibles en Tunisie. Consultez les produits et les prix en dinars.`;
+  const description = buildDescription(entries.length);
   return {
-  title: { absolute: title },
-  description,
-  openGraph: {
-    title,
-    description:
-      'Répertoire A–Z des marques de protéines et compléments alimentaires en Tunisie. Optimum Nutrition, BioTech USA, MuscleTech et bien d’autres.',
-    url: 'https://protein.tn/brands',
-    siteName: 'Protéine Tunisie',
-    images: [
-      {
-        url: 'https://protein.tn/og-banner.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'Protéine Tunisie — marques compléments',
-      },
-    ],
-    locale: 'fr_FR',
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title,
-    description:
-      'Répertoire A–Z des marques de protéines et compléments alimentaires en Tunisie.',
-    images: ['https://protein.tn/og-banner.jpg'],
-  },
-  alternates: {
-    canonical: 'https://protein.tn/brands',
-  },
+    title: { absolute: TITLE },
+    description,
+    openGraph: {
+      title: TITLE,
+      description,
+      url: CANONICAL,
+      siteName: 'Protéine Tunisie',
+      images: [
+        {
+          url: 'https://protein.tn/og-banner.jpg',
+          width: 1200,
+          height: 630,
+          alt: 'Protéine Tunisie — marques compléments',
+        },
+      ],
+      locale: 'fr_FR',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: TITLE,
+      description,
+      images: ['https://protein.tn/og-banner.jpg'],
+    },
+    alternates: {
+      canonical: CANONICAL,
+    },
   };
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────────────────────
+ * PAGE
+ * ───────────────────────────────────────────────────────────────────────────────────────────── */
+
 export default async function BrandsPage() {
-  /*
-    ── THREE FETCHES, IN PARALLEL, EACH ALLOWED TO FAIL ON ITS OWN ──────────────────────────
-    The brands are the page; the counts and the availability decorate it. So only the first is
-    wrapped in `loadForCache` — a failed getAllBrands() during `next build` must not bake an
-    empty brand grid into a cached page (that is what made /brands unindexable once already),
-    and noStore() defers the render to runtime instead. The other two already fail soft, to `{}`
-    and to an empty facet set, and buildBrandEntries degrades the UI accordingly rather than
-    dropping every brand whose count it could not look up.
-  */
-  const { entries, hasCounts, hasStockData, facets } = await loadDirectory();
+  const { entries, hasCounts, hasStockData, totalProducts, stock } = await loadDirectory();
 
   /*
     ── THE FEATURED TIER ────────────────────────────────────────────────────────────────────
-    `logo != null` is the selection rule — see FeaturedBrands for why that is the right proxy
-    for "a brand somebody deliberately onboarded". Sorted by catalogue depth, so the plates read
-    as the shop's roster rather than as the first names in the alphabet, which is exactly the
-    fault the homepage brand strip was fixed for last week.
+    24 logo plates: FEATURED_ORDER (Search Console click order) first, then what ships today,
+    then catalogue depth — see brandEntries.ts. Then the text row for the brands with demand and
+    no logo (NOW Foods, Nutricost, Floradix…).
   */
-  const featured = entries
-    .filter((e) => e.logo)
-    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'fr'));
+  const featured = pickFeaturedBrands(entries);
+  const textFeatured = pickTextFeaturedBrands(entries);
+  const rayons = await loadBrandRayons(entries);
 
-  const inStockBrandCount = entries.filter((e) => e.stock > 0).length;
-  const totalProducts = facets?.total_published ?? 0;
+  const inStockBrandCount = hasStockData ? entries.filter((e) => e.stock > 0).length : 0;
+
+  // ONE list for the visible FAQ and the FAQPage block — Google's condition for FAQPage.
+  const faq = brandFaq(entries, rayons, stock);
 
   /*
     ── THE TRAIL IS RENDERED, NOT JUST DECLARED ──────────────────────────────────────────────
-    This BreadcrumbList described a hierarchy — Accueil › Marques — that no visitor could see:
-    the page opened straight on its hero plate with no link back to the root from its own main
-    content. Google asks that structured data represent content on the page, so the fix is the
-    one that helps both readers at once: render the trail. `ShopBreadcrumbs` is the site's
-    listing-page breadcrumb (it is what /shop and every category page use); it injects the
-    "Accueil" crumb itself and renders the last item as unlinked text, so the visible labels are
-    "Accueil" and "Marques" — the same two strings, character for character, as the ListItem
-    names below.
+    BrandsPageContent renders `ShopBreadcrumbs`, whose visible labels are « Accueil » and
+    « Marques » — the same two strings, character for character, as the ListItem names here.
   */
   const breadcrumbSchema = buildBreadcrumbListSchema(
     [
       { name: 'Accueil', url: '/' },
-      { name: 'Marques', url: '/brands' },
+      { name: 'Marques', url: PAGE_PATH },
     ],
     BASE_URL,
-    { pageUrl: '/brands' }
+    { pageUrl: PAGE_PATH }
   );
-  const collectionSchema = buildCollectionPageSchema(
-    'Toutes nos marques de compléments alimentaires',
-    '/brands',
-    BASE_URL,
-    {
-      description:
-        'Répertoire alphabétique des marques de protéines et compléments alimentaires disponibles en Tunisie, avec le nombre de produits et la disponibilité de chacune.',
-      withBreadcrumb: true,
-      withItemList: featured.length > 0,
-    }
-  );
+
   /*
-    ITEMLIST CARRIES THE FEATURED TIER, NOT ALL 577. buildItemListSchema slices to 20 by design,
-    and that is the right 20 to give: a list of every brand in the catalogue would be ~60 KB of
-    JSON-LD on every render describing rows that are already in the HTML as ordinary links —
-    which is what Google reads them from anyway.
+    ── THE ITEMLIST IS THE 24 PLATES, AS BRAND NODES ────────────────────────────────────────
+    Built inline rather than through buildItemListSchema, because its items are ENTITIES: each
+    ListItem.item is the same Brand node the brand page itself defines — `@id` the brand-page URL
+    derived from the RAW admin name (the identifier every product's `brand.@id` already uses),
+    `name` the display name the plate shows, `logo` the exact URL the plate's <img> loads. A list
+    of {name, url} pairs said "here are links"; this says "here are these brands".
+
+    (buildItemListSchema caps its list at 30 items — structuredData.ts — not 20 as this comment
+    used to claim. Neither cap matters here: the list is the 24 plates and nothing else. Listing
+    every brand would be ~60 KB of JSON-LD describing rows that are already ordinary links.)
   */
+  const featuredNodes = featured
+    .map((b) => buildBrandSchema({ designation_fr: b.rawName, logo: b.logo }, BASE_URL, { name: b.name }))
+    .filter((node): node is object => node !== null);
   const itemListSchema =
-    featured.length > 0
-      ? buildItemListSchema(
-          featured.slice(0, 20).map((b) => ({ name: b.name, url: `/${b.slug}` })),
-          BASE_URL,
-          { name: 'Marques en vedette', pageUrl: '/brands' }
-        )
+    featuredNodes.length > 0
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'ItemList',
+          '@id': `${BASE_URL}${PAGE_PATH}#itemlist`,
+          name: 'Marques en vedette',
+          numberOfItems: featuredNodes.length,
+          itemListElement: featuredNodes.map((item, index) => ({
+            '@type': 'ListItem',
+            position: index + 1,
+            item,
+          })),
+        }
       : null;
-  // The same array the page renders visibly, which is the condition Google puts on FAQPage.
-  const faqSchema = buildFAQPageSchemaFromProductFaq(
-    brandFaq(entries.length).map(({ q, a }) => ({ q, a }))
-  );
+
+  const collectionSchema = buildCollectionPageSchema(BRANDS_H1, PAGE_PATH, BASE_URL, {
+    description:
+      'Répertoire des marques de protéines et compléments alimentaires disponibles en Tunisie, classées de A à Z et par rayon, avec le nombre de produits et la disponibilité de chacune.',
+    withBreadcrumb: true,
+    // mainEntity → `${url}#itemlist`, the @id above. Only claimed when the list is emitted.
+    withItemList: itemListSchema !== null,
+  });
+
+  const faqSchema = buildFAQPageSchemaFromProductFaq(faq.map(({ q, a }) => ({ q, a })));
 
   return (
     <>
@@ -159,15 +268,12 @@ export default async function BrandsPage() {
       {faqSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       )}
-      {/* `strip` is the one-row band step, and `first` because this row now sits against the
-          header — the hero band below keeps its own `first` and simply draws no seam, which is
-          right: a crumb row and the page head it introduces read as one block. */}
-      <Section spacing="strip" width="wide" first>
-        <ShopBreadcrumbs items={[{ label: 'Marques' }]} />
-      </Section>
       <BrandsPageContent
         entries={entries}
         featured={featured}
+        textFeatured={textFeatured}
+        rayons={rayons}
+        faq={faq}
         hasCounts={hasCounts}
         hasStockData={hasStockData}
         totalProducts={totalProducts}

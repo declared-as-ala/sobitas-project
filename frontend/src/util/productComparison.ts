@@ -87,9 +87,13 @@ export function extractFormat(name: string | null | undefined): string {
    * equipment have no size in their names, and those cells show a dash. Widening the regex until
    * they match would mean inventing a format, which is the failure this whole file is shaped to
    * avoid.
+   *
+   * `gélules` must precede `g` as well, and the end test is Unicode-aware: with an ASCII `\b`, « É »
+   * is a non-word character, so `g` took the first letter of « 60 GÉLULES » and the brand in-stock
+   * table printed « 60 g » for BioTech USA Ashwagandha 60 gélules (06/10/2026).
    */
   const match = name.match(
-    /(\d+(?:[.,]\d+)?)\s*(kg|mg|grs?|g|ml|cl|l|gélules?|gelules?|softgels?|capsules?|comprimés?|comprimes?|caps|tabs|tablets?|sachets?|portions?|doses?|servings?)\b/i
+    /(\d+(?:[.,]\d+)?)\s*(kg|mg|gélules?|gelules?|grs?|g|ml|cl|l|softgels?|capsules?|comprimés?|comprimes?|caps|tabs|tablets?|sachets?|portions?|doses?|servings?)(?![\p{L}\p{N}])/iu
   );
   if (!match) return '';
 

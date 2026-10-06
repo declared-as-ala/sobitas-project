@@ -252,11 +252,6 @@
     "DS002": 1,
     "DS003": 2
   },
-  "src/app/components/SafeImage.tsx": {
-    "DS001": 6,
-    "DS002": 6,
-    "DS003": 6
-  },
   "src/app/components/SearchBar.tsx": {
     "DS005": 1
   },

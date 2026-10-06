@@ -357,7 +357,7 @@ export const ProductCard = memo(function ProductCard({
         <PackCardImage
           imageSrc={productData.image}
           productName={productData.name}
-          imageAlt={buildProductAlt(product as any, { name: productData.name })}
+          imageAlt={buildProductAlt(product as any, { name: productData.name, brand })}
           productId={product.id}
           slug={productData.slug}
           mode={productData.imagePresentation.mode}

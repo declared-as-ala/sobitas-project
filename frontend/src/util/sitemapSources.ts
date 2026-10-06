@@ -123,6 +123,13 @@ export type SitemapBuildContext = {
    * question needs, instead of that question being re-argued from a sampled curl each time.
    */
   brandIdsWithIndexableProducts: Set<number>;
+  /**
+   * Brand id → the newest `updated_at` (ISO string) among that brand's PUBLISHED products.
+   * Populated by `products`, on the same publication rule as `brandIdsWithProducts`, because a
+   * brand page renders every published product: when one of them changes, the page changed.
+   * Read by `brandsSource`, which advertises max(brand row date, this) as the brand's <lastmod>.
+   */
+  brandLastModified: Map<number, string>;
   /** Lowercased subcategory slugs with at least one PUBLISHED product — same rule. From `products`. */
   subCategorySlugsWithProducts: Set<string>;
   /**
@@ -548,6 +555,7 @@ export async function loadSharedContext(baseUrl: string): Promise<{ ctx: Sitemap
     baseUrl,
     brandIdsWithProducts: new Set<number>(),
     brandIdsWithIndexableProducts: new Set<number>(),
+    brandLastModified: new Map<number, string>(),
     subCategorySlugsWithProducts: new Set<string>(),
     subCategorySlugsWithStock: new Set<string>(),
     sawProductStockSignal: false,
@@ -681,7 +689,21 @@ const productsSource: SitemapSource = {
        * removed from the sitemap, for a reason that has nothing to do with them.
        */
       const brandId = Number((p as { brand_id?: unknown }).brand_id);
-      if (Number.isFinite(brandId) && brandId > 0) ctx.brandIdsWithProducts.add(brandId);
+      if (Number.isFinite(brandId) && brandId > 0) {
+        ctx.brandIdsWithProducts.add(brandId);
+        /*
+         * The brand page's freshest change. `?fields=index` carries `updated_at` on every row
+         * (measured 05/10/2026), so this costs no request. getLastModified() parses it, so a row
+         * with no or an unparseable timestamp contributes nothing rather than a guessed date.
+         */
+        const productDate = getLastModified(p as { updated_at?: string; created_at?: string });
+        if (productDate) {
+          const known = ctx.brandLastModified.get(brandId);
+          if (!known || productDate.getTime() > new Date(known).getTime()) {
+            ctx.brandLastModified.set(brandId, productDate.toISOString());
+          }
+        }
+      }
       if (subCategorySlug) ctx.subCategorySlugsWithProducts.add(subCategorySlug.toLowerCase());
 
       /*
@@ -1043,6 +1065,8 @@ const brandsSource: SitemapSource = {
 
     const entries: SourceEntry[] = [];
     let withoutIndexableProducts = 0;
+    let withLogo = 0;
+    let refreshedByProducts = 0;
     for (const brand of crawl.rows) {
       // A brand page with no products is a heading and nothing to buy — a soft 404, and unlike
       // subcategories there is no editorial fallback for brands. Self-correcting: the day a brand
@@ -1069,12 +1093,36 @@ const brandsSource: SitemapSource = {
       const hasIndexableProducts = ctx.brandIdsWithIndexableProducts.has(Number(brand.id));
       if (!hasIndexableProducts) withoutIndexableProducts++;
 
+      /*
+       * <lastmod> = the later of the brand row and its newest published product. The row alone
+       * moves only when the brand itself is edited: measured 05/10/2026, /optimum-nutrition
+       * advertised 2026-08-11 while products on that page had changed since — and lastmod is the
+       * field Google schedules recrawls on. Same max() reasoning as contentFileLastModified().
+       */
+      const rowDate = getLastModified(brand as { updated_at?: string; created_at?: string });
+      const productIso = ctx.brandLastModified.get(Number(brand.id));
+      const productDate = productIso ? new Date(productIso) : undefined;
+      const lastModified =
+        rowDate && productDate
+          ? (productDate.getTime() > rowDate.getTime() ? productDate : rowDate)
+          : rowDate ?? productDate;
+      if (productDate && (!rowDate || productDate.getTime() > rowDate.getTime())) refreshedByProducts++;
+
+      /*
+       * The brand logo, declared for Google Images: 40 of the 578 submitted brands on 06/10/2026 have
+       * a logo. Product photos are deliberately NOT added here: the product page stays the one
+       * landing page for each product photo, so it is not split across the brand listing too.
+       */
+      const img = toSitemapImage(brand.logo);
+
       entries.push({
         url: `${ctx.baseUrl}/${brandNameToSlug(brand.designation_fr)}`,
-        lastModified: getLastModified(brand as { updated_at?: string; created_at?: string }),
+        lastModified,
         changeFrequency: 'weekly',
         priority: hasIndexableProducts ? 0.75 : 0.4,
+        ...(img ? { images: [img] } : {}),
       });
+      if (img) withLogo++;
     }
 
     return {
@@ -1082,7 +1130,8 @@ const brandsSource: SitemapSource = {
       verified,
       note:
         `${note} → ${entries.length} brand URL(s) ` +
-        `(${withoutIndexableProducts} with no indexable product, demoted to priority 0.4)`,
+        `(${withoutIndexableProducts} with no indexable product, demoted to priority 0.4; ` +
+        `${withLogo} with a logo <image:image>; ${refreshedByProducts} lastmod advanced by a product)`,
     };
   },
 };

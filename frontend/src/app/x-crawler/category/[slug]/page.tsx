@@ -57,12 +57,15 @@ import { loadBrands } from '@/util/brandIndex';
 import { categoryAnchor } from '@/util/categoryAnchor';
 import type { Brand, Category, Page, Product, SubCategory } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
-import { buildBrandMetaTitle, buildBrandSocialMetadata } from '@/util/brandMeta';
+import { buildBrandMetaTitle, buildBrandSocialMetadata, pickBrandShareImage } from '@/util/brandMeta';
 import { brandDescriptionWithFacts, loadBrandStockFacts } from '@/util/brandStockFacts';
 import { getBrandCategoryNames } from '@/util/brandCategoryNames';
-import { buildGenericBrandTemplate } from '@/util/brandTemplate';
-import { getBrandSeoEntry } from '@/config/brandSeoConfig';
+import { buildBrandPageCopy } from '@/util/brandTemplate';
+import { orderBrandListing } from '@/util/brandListingOrder';
+import { seoRobots } from '@/util/robotsDirectives';
 import { getCmsPageTitleOverride } from '@/config/cmsPageSeoConfig';
+import { BrandHeader } from '@/app/(shop)/brand/BrandHeader';
+import { BrandPageBottom } from '@/app/(shop)/brand/BrandPageBottom';
 import { buildShopUrl, parseShopQuery, type RawSearchParams } from '@/util/shopQuery';
 /*
  * ── THE HIERARCHY COMES FROM THE DECLARED TREE, NOT FROM THE API PAYLOAD ─────────────────────
@@ -303,10 +306,16 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
        */
       let brandProductCount = 0;
       let categoryNames: string[] = [];
+      // Same og:image as the human route: a photo of the brand's own product (or its logo).
+      let shareImage: ReturnType<typeof pickBrandShareImage> | undefined;
       try {
         const listing = await getCachedProductsByBrand(brand.id);
-        brandProductCount = (listing?.products ?? []).length;
-        categoryNames = getBrandCategoryNames(listing?.products ?? []);
+        // The ORDERED listing, exactly as the page body counts it (orderBrandListing drops nameless
+        // rows), so the <meta description>'s count and families equal the JSON-LD description's.
+        const ordered = orderBrandListing(listing?.products ?? [], brand);
+        brandProductCount = ordered.length;
+        categoryNames = getBrandCategoryNames(ordered);
+        shareImage = pickBrandShareImage(brand, ordered);
       } catch {
         // Never let a transient listing failure flip a healthy brand to noindex — assume it has
         // products and stay indexable. A wrong noindex is far more expensive than a wrong index.
@@ -320,11 +329,12 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
         title: { absolute: title },
         description,
         alternates: { canonical },
-        robots: { index: brandProductCount > 0, follow: true },
+        // seoRobots keeps `max-image-preview:large` on the googlebot line — see util/robotsDirectives.ts.
+        robots: seoRobots(brandProductCount > 0, true),
         // This route declared no openGraph at all, so every brand page handed crawlers and link
         // unfurlers the site-wide /og-banner.jpg while a browser got the reviewed hero image.
         // Shared with the human route now — see buildBrandSocialMetadata.
-        ...buildBrandSocialMetadata(brand.designation_fr, canonical, categoryNames, description),
+        ...buildBrandSocialMetadata(brand.designation_fr, canonical, categoryNames, description, shareImage ?? undefined),
       };
     }
     const page = await findPageBySlug(cleanSlug);
@@ -346,7 +356,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
         title: { absolute: getCmsPageTitleOverride(cleanSlug) || page.meta_title?.trim() || page.title || 'Page' },
         description,
         alternates: { canonical },
-        robots: { index: page.robots_index ?? true, follow: page.robots_follow ?? true },
+        robots: seoRobots(page.robots_index ?? true, page.robots_follow ?? true),
       };
     }
   } catch (e) {
@@ -675,45 +685,45 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
       { rethrow: true },
     );
     const products: Product[] = (result as { products?: Product[] }).products ?? [];
-    const title = brand.designation_fr;
+    /*
+     * ── THE SAME FIVE LINES AS app/(shop)/[slug] ───────────────────────────────────────────────
+     * Same inputs, same order, same builders as the shopper route for this URL. The header and
+     * everything under the list are the SAME server components the shopper route renders
+     * (BrandHeader, BrandPageBottom), so the two views now show the same sections in the same
+     * order. Measured on 05/10/2026 before this change, Googlebot read H1 → 51 product cards →
+     * intro → guide → FAQ, and on /now-foods the intro came after 517 cards; the shopper got a
+     * different panel with a claim the bot never saw.
+     */
+    const facts = (await loadBrandStockFacts(brand.id)) ?? { inStockCount: null, priceMin: null, priceMax: null };
+    const ordered = orderBrandListing(products, brand);
+    const copy = buildBrandPageCopy({ slug: cleanSlug, brand, products: ordered, facts });
+    const description = await brandDescriptionWithFacts(brand.id, brand.designation_fr, cleanSlug, getBrandCategoryNames(ordered), ordered.length);
+    const brandSchemas = buildBrandLandingSchemas({ brand, products: ordered, slug: cleanSlug, baseUrl, description, copy });
+    // « Marques », not « Boutique »: the trail the shopper sees and the BreadcrumbList JSON-LD both
+    // say Accueil › Marques › {Marque}. This route alone still said Boutique /shop.
     const breadcrumbs: CrawlerListLink[] = [
       { name: 'Accueil', url: '/' },
-      { name: 'Boutique', url: '/shop' },
-      { name: title, url: `/${cleanSlug}` },
+      { name: 'Marques', url: '/brands' },
+      { name: copy.displayName, url: `/${cleanSlug}` },
     ];
-    const brandSeo = getBrandSeoEntry(cleanSlug);
-    const genericBrand = brandSeo ? null : buildGenericBrandTemplate(
-      title,
-      products,
-      (await loadBrandStockFacts(brand.id)) ?? { inStockCount: null, priceMin: null, priceMax: null }
-    );
-    /* Shared with app/(shop)/[slug], which serves this same URL to humans. This route used to
-       build its own CollectionPage as `Produits ${title}` with no description, while the human
-       route used the curated title and the brandSeoConfig description — so the copy written for
-       search engines was the one thing the search engine never saw. See util/brandJsonLd.ts. */
-    const brandSchemas = buildBrandLandingSchemas({
-      brand, products, slug: cleanSlug, baseUrl,
-      description: await brandDescriptionWithFacts(brand.id, brand.designation_fr, cleanSlug, getBrandCategoryNames(products), products.length),
-      faqs: genericBrand?.faqs,
-    });
 
     return (
       <>
         {brandSchemas.map((schema, i) => ldScript(schema, `brand-ld-${i}`))}
         <CrawlerCategoryView
-          title={title}
-          headingOverride={brandSeo?.h1 ?? genericBrand?.heading}
-          // Factual intro from the brand's own catalogue. These 55 pages were a median of 39
-          // words for Googlebot — an H1, a breadcrumb and a bare product list — which is the thin,
-          // near-identical "scaled content" pattern Google discounts, on exactly the brand+geo
-          // queries ("dymatize tunisie") they exist to win.
-          introHtml={brandSeo?.introHtml ?? genericBrand?.introHtml}
-          howToChooseTitle={brandSeo?.howToChooseTitle ?? genericBrand?.howToChooseTitle}
-          howToChooseBody={brandSeo?.howToChooseBody ?? genericBrand?.howToChooseBody}
-          faqs={brandSeo?.faqs ?? genericBrand?.faqs ?? []}
+          title={copy.displayName}
+          headerSlot={<BrandHeader copy={copy} />}
+          afterGridSlot={<BrandPageBottom copy={copy} />}
+          gridHeadingOverride={copy.gridHeading}
+          // The intro, guide, FAQ and related links all live in BrandPageBottom now; passing them
+          // here as well would print them twice.
+          introHtml={null}
+          howToChooseTitle={null}
+          howToChooseBody={null}
+          faqs={[]}
           breadcrumbs={breadcrumbs}
-          products={products}
-          relatedCategories={brandSeo?.relatedCategories.map((item) => ({ name: item.name, url: item.url })) ?? []}
+          products={ordered}
+          relatedCategories={[]}
           kind="brand"
         />
       </>

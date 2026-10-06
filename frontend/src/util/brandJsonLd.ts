@@ -5,11 +5,14 @@ import {
   buildFAQPageSchemaFromQA,
   buildItemListSchema,
 } from '@/util/structuredData';
-import { getBrandSeoEntry } from '@/config/brandSeoConfig';
-import { buildBrandMetaTitle } from '@/util/brandMeta';
+import { buildBrandMetaDescription, buildBrandMetaTitle } from '@/util/brandMeta';
+import { getBrandCategoryNames } from '@/util/brandCategoryNames';
+import { orderBrandListing } from '@/util/brandListingOrder';
+import { humanProductHeading } from '@/util/productMetaDescription';
+import { resolveCategoryMetaDescription } from '@/util/resolveCategorySeo';
 import { getProductLink } from '@/util/productUrl';
 import type { Brand, Product } from '@/types';
-import type { BrandFaq } from '@/util/brandTemplate';
+import { SHARED_SUR_COMMANDE_QAS, type BrandPageCopy } from '@/util/brandTemplate';
 
 /**
  * A brand landing page's structured data, in ONE place, because it is emitted from TWO routes —
@@ -18,25 +21,30 @@ import type { BrandFaq } from '@/util/brandTemplate';
  * ── THE TWO VIEWS WERE DESCRIBING THE PAGE DIFFERENTLY ──────────────────────────────────────
  * `middleware.ts` rewrites crawler user-agents on `/{brand-slug}` to `/x-crawler/category/{slug}`,
  * so Googlebot renders a different route than a shopper. Both emitted a CollectionPage, and the
- * two had drifted. Measured on production 08/09/2026 (`?__crawler=1` forces the crawler route
- * past the CDN's URL-keyed cache, which otherwise serves one view's HTML to the other and hides
- * the difference completely):
+ * two had drifted (08/09/2026: browser « BioTech USA Tunisie | … », Googlebot « Produits BIOTECH
+ * USA » with no description). A shared builder is the only fix that stays fixed.
  *
- *     browser   name "BioTech USA Tunisie | Pure Whey & Iso Whey Zero — Protein.tn"
- *               description "BioTech USA en Tunisie : 100% Pure Whey et Iso Whey Zero 2,27 kg…"
- *     Googlebot name "Produits BIOTECH USA"
- *               description  (absent)
- *
- * Same on /optimum-nutrition, and by construction on all 55 brand pages: the human route used
- * buildBrandMetaTitle + the curated brandSeoConfig description, the crawler route hardcoded
- * `Produits ${title}` and passed no description at all. The curated copy — the whole point of the
- * brand SEO config — reached shoppers and never reached the search engine it was written for.
- * This is the fourth time this route pair has drifted; a shared builder is the only fix that
- * stays fixed.
+ * ── EVERY NODE NOW READS THE SAME VALUES THE PAGE PRINTS (05/10/2026) ─────────────────────────
+ *   - CollectionPage.name is buildBrandMetaTitle WITH the brand's family names — the <title>.
+ *     Without them it disagreed with the <title> on every generic brand (/true-sea-moss).
+ *   - description is the resolved <meta description> the route passes in.
+ *   - the breadcrumb and ItemList name the brand by its display name, not the database row.
+ *   - ItemList entries are in the grid's own order (orderBrandListing) and named with the
+ *     humanised product heading (the H1 of each product page), so « PACK GAIN MUSCULAIRE RAPIDE »
+ *     with its leading space no longer reaches the markup.
+ *   - FAQPage is `copy.faqs`: the resolved list the page shows, curated or generic. FAQ markup
+ *     without the same visible Q&A is a policy violation, so there is no second source.
+ *     ONE exclusion: SUR_COMMANDE_QA (and its no-parcel-terms twin, SUR_COMMANDE_QA_BULKY). It is byte-identical on ~570 brand pages (the catalogue is
+ *     ~99% sur commande), and Google's FAQPage guideline says a Q&A repeated across a site is
+ *     marked up once at most. It stays visible; it is only left out of the markup. Marking up a
+ *     subset of the visible FAQ is valid — marking up anything NOT visible is not.
+ *   - primaryImageOfPage is the page's share image (pickBrandShareImage), so the CollectionPage,
+ *     og:image and the visible grid point at the same picture.
  *
  * ── THE BRAND NODE ──────────────────────────────────────────────────────────────────────────
- * Every product on the site already points its `brand` at this page's URL as an `@id`. Nothing
- * defined that identifier. `about` does, here, on the brand's own page. See buildBrandSchema.
+ * Every product on the site already points its `brand` at this page's URL as an `@id`. `about`
+ * defines it, here, on the brand's own page — see buildBrandSchema. `sameAs` is the brand's
+ * official site only when a curated entry states one.
  */
 export function buildBrandLandingSchemas({
   brand,
@@ -44,83 +52,74 @@ export function buildBrandLandingSchemas({
   slug,
   baseUrl,
   description: resolvedDescription,
-  faqs,
+  copy,
 }: {
   brand: Brand;
   products: Product[];
   /** The slug this page is SERVED at — the one middleware resolved, not a re-derived one. */
   slug: string;
   baseUrl: string;
+  /** The resolved <meta description> of this page (brandDescriptionWithFacts). */
   description?: string;
-  faqs?: BrandFaq[];
+  copy: BrandPageCopy;
 }): object[] {
   const path = `/${slug}`;
-  const brandSeo = getBrandSeoEntry(slug);
-  const title = buildBrandMetaTitle(brand.designation_fr);
-  const description = resolvedDescription ?? (
-    brandSeo?.metaDescription ||
-    `Tous les produits ${brand.designation_fr} en Tunisie : qualité premium, produits authentiques, livraison rapide partout dans le pays.`
+  const list = Array.isArray(products) ? products : [];
+  const categoryNames = getBrandCategoryNames(list);
+  const title = buildBrandMetaTitle(brand.designation_fr, categoryNames);
+  const description = resolvedDescription ?? resolveCategoryMetaDescription(
+    buildBrandMetaDescription(brand.designation_fr, categoryNames),
+    { priceMin: null, priceMax: null, inStockCount: null, productCount: copy.counts.total }
   );
 
   /*
-   * "Marques", not "Boutique" — and the same change is made in ShopPageClient so the visible trail
-   * and this one stay the same sentence.
+   * "Marques", not "Boutique" — the visible trail on both routes says the same.
    *
-   * Every root-level slug here looks alike to a crawler: /creatine is a category,
-   * /optimum-nutrition is a brand, /prise-de-masse is a rayon, and nothing in the URL distinguishes
-   * them. Competitors buy that distinction with /brand/ and /category/ prefixes. We are not moving
-   * 570 brand URLs for it — /optimum-nutrition earns 47 clicks and 1,614 impressions and is the
-   * third best page on the site, so its URL does not change. The breadcrumb states the type
-   * instead, and /brands is a real hub listing all 570, so the crumb is a genuine parent.
+   * Every root-level slug looks alike to a crawler: /creatine is a category, /optimum-nutrition
+   * is a brand, /prise-de-masse is a rayon. Competitors buy that distinction with /brand/ and
+   * /category/ prefixes; we do not move 570 brand URLs for it. The breadcrumb states the type
+   * instead, and /brands is a real hub listing all of them, so the crumb is a genuine parent.
    */
   const breadcrumb = buildBreadcrumbListSchema(
     [
       { name: 'Accueil', url: '/' },
       { name: 'Marques', url: '/brands' },
-      { name: brand.designation_fr, url: path },
+      { name: copy.displayName, url: path },
     ],
     baseUrl,
     { pageUrl: path }
   );
 
-  const listItems = (Array.isArray(products) ? products : [])
-    .filter((p) => p && p.designation_fr)
-    .map((p) => ({ name: p.designation_fr || 'Produit', url: getProductLink(p) }))
-    .filter((p) => p.url && p.url !== '/shop/');
+  const listItems = orderBrandListing(list, brand)
+    .map((product) => ({ name: humanProductHeading(product).trim() || 'Produit', url: getProductLink(product) }))
+    .filter((item) => item.url && item.url !== '/shop/');
 
   const collection = buildCollectionPageSchema(title, path, baseUrl, {
     description,
     withBreadcrumb: true,
     withItemList: listItems.length > 0,
-    about: buildBrandSchema(brand, baseUrl) ?? undefined,
+    about: buildBrandSchema(brand, baseUrl, {
+      name: copy.displayName,
+      sameAs: copy.officialUrl ? [copy.officialUrl] : undefined,
+    }) ?? undefined,
+    primaryImage: copy.shareImage ? { url: copy.shareImage.url, caption: copy.shareImage.alt } : undefined,
   });
 
   /*
-   * NO PRE-SLICE. `listItems` is every product the caller passed, and `getProductsByBrand` now
-   * pages through the brand's whole catalogue (services/api.ts) instead of taking the endpoint's
-   * default first 20, so `numberOfItems` counts the brand as the page actually renders it.
-   *
-   * This used to be `listItems.slice(0, 20)`, which made `numberOfItems` say 20 whatever the page
-   * listed: the crawler view (CrawlerCategoryView) renders EVERY product of the brand as a link
-   * and prints the real count in its own "Produits (N)" heading, so on any brand holding more than
-   * 20 the list and the visible grid contradicted each other — and the products past the 20th
-   * appeared in no listing markup at all. /optimum-nutrition holds 50, not the 20 an earlier note
-   * here claimed, so there was never a brand page where the defect was invisible.
-   *
-   * buildItemListSchema keeps its own 30-entry cap on `itemListElement` (payload size, documented
-   * there), which caps the enumerated entries only, not the count.
+   * NO PRE-SLICE: `numberOfItems` counts the brand as the page renders it (getProductsByBrand
+   * pages through the whole catalogue). buildItemListSchema keeps its own 30-entry cap on
+   * `itemListElement` for payload size, which caps the enumerated entries only, not the count.
    */
   const itemList =
     listItems.length > 0
       ? buildItemListSchema(listItems, baseUrl, {
-          name: `Produits ${brand.designation_fr}`,
+          name: `Produits ${copy.displayName}`,
           pageUrl: path,
         })
       : null;
 
-  // FAQ only when the curated entry exists — and only because both views render those same Q&As
-  // as visible text. FAQ markup without matching on-page content is a policy violation.
-  const faq = brandSeo ? buildFAQPageSchemaFromQA(brandSeo.faqs) : faqs?.length ? buildFAQPageSchemaFromQA(faqs) : null;
+  const markedUpFaqs = copy.faqs.filter((qa) => !SHARED_SUR_COMMANDE_QAS.includes(qa));
+  const faq = markedUpFaqs.length ? buildFAQPageSchemaFromQA(markedUpFaqs) : null;
 
   return [breadcrumb, collection, ...(itemList ? [itemList] : []), ...(faq ? [faq] : [])];
 }

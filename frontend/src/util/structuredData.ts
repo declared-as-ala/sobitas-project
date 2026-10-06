@@ -12,10 +12,11 @@ import { decodeHtmlEntities } from '@/util/htmlEntities';
 import { getEffectivePrice, hasValidPromo } from '@/util/productPrice';
 import { getProductStockStatus } from '@/util/cartStock';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
-import { productSourceGallery } from '@/util/productSourceFacts';
+import { productSourceGallery, splitPackshotsFromLabels } from '@/util/productSourceFacts';
 import { cleanSourceText } from '@/util/sourceBoilerplate';
 import type { Product, FAQ, Review } from '@/types';
 import { humanProductHeading } from '@/util/productMetaDescription';
+import { productImageAlt } from '@/util/productAlt';
 
 const RICH_RESULTS_TEST = 'https://search.google.com/test/rich-results';
 const PRODUCTION_ORIGIN = 'https://protein.tn';
@@ -618,6 +619,24 @@ function buildAggregateRatingAndReviews(product: Product): { aggregateRating?: o
   return result;
 }
 
+/**
+ * One caption per declared photograph, by the role it has on the page: the first is the main image,
+ * then the packshots (« … — photo 2 sur 2 ») and the label shots (« … — étiquette 1 »), split by the
+ * same rule the product page uses (splitPackshotsFromLabels). Same builder as every <img alt> on
+ * both renders, so the caption Google reads beside each ImageObject is the page's own alt — never
+ * the backend's « NAME — Brand — Tunisie » template, which repeated the brand and kept mojibake.
+ */
+function productMediaCaptions(product: Product, urls: string[]): string[] {
+  const { packshots, labels } = splitPackshotsFromLabels(urls);
+  return urls.map((_, index) => {
+    if (index === 0) return productImageAlt(product, { role: 'main' });
+    if (index < packshots.length) {
+      return productImageAlt(product, { role: 'gallery', index, total: packshots.length });
+    }
+    return productImageAlt(product, { role: 'label', index: index - packshots.length, total: labels.length });
+  });
+}
+
 export function buildProductJsonLd(product: Product, canonicalUrl: string): object | null {
   canonicalUrl = normalizeProductionUrl(canonicalUrl, `/shop/${product.slug || product.id}`);
   /*
@@ -645,7 +664,9 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
    */
   const galleryImages = productSourceGallery(product as Parameters<typeof productSourceGallery>[0]);
   // Main product cover first so Google uses it as primary image in Product rich results.
-  const rawImages = [product.cover, product.schema?.image, product.seo?.image, ...galleryImages, (product as { alt_cover?: string }).alt_cover];
+  // `alt_cover` used to close this list. It is the image's ALT TEXT, not an image: every value it
+  // holds is prose (« … — Optimum Nutrition — Tunisie »), which looksLikeImagePath rejected anyway.
+  const rawImages = [product.cover, product.schema?.image, product.seo?.image, ...galleryImages];
   const imageArray = normalizeJsonLdImages(rawImages);
   const dedupedImages = [...new Set(imageArray)];
   // Authoritative Offer price = the effective (promo-aware) selling price, so structured data
@@ -729,12 +750,13 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
 
   if (dedupedImages.length > 0) {
     schema.image = dedupedImages;
+    const captions = productMediaCaptions(product, dedupedImages);
     schema.associatedMedia = dedupedImages.map((url, index) => ({
       '@type': 'ImageObject',
       '@id': `${canonicalUrl}#image-${index + 1}`,
       url,
       contentUrl: url,
-      caption: (product.seo?.image_alt || product.alt_cover || product.designation_fr || 'Produit').trim(),
+      caption: captions[index],
       inLanguage: 'fr-TN',
     }));
   }
@@ -912,12 +934,13 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
 
   if (normalizedImages.length > 0) {
     sanitized.image = normalizedImages;
+    const captions = productMediaCaptions(product, normalizedImages);
     sanitized.associatedMedia = normalizedImages.map((url, index) => ({
       '@type': 'ImageObject',
       '@id': `${canonical}#image-${index + 1}`,
       url,
       contentUrl: url,
-      caption: (product.seo?.image_alt || product.alt_cover || product.designation_fr || 'Produit').trim(),
+      caption: captions[index],
       inLanguage: 'fr-TN',
     }));
   }
@@ -1304,6 +1327,12 @@ type PageNodeOptions = {
   withItemList?: boolean;
   /** A real entity this page is about (e.g. the Brand on a brand landing). Emitted inline. */
   about?: object;
+  /**
+   * The page's representative image (a brand logo, a category's lead packshot). Emitted as
+   * `primaryImageOfPage` ImageObject plus `image`, so a listing page names the picture Google
+   * Images should associate with it. Pass an absolute URL; `caption` should be that image's alt.
+   */
+  primaryImage?: { url: string; caption?: string };
 };
 
 function buildPageNode(
@@ -1316,6 +1345,8 @@ function buildPageNode(
   const base = baseUrl.replace(/\/$/, '');
   const fullUrl = url.startsWith('http') ? url : `${base}${url.startsWith('/') ? url : '/' + url}`;
   const ids = pageNodeIds(fullUrl);
+  const primaryImageUrl = options?.primaryImage?.url?.trim() || '';
+  const primaryImageCaption = options?.primaryImage?.caption?.trim() || '';
   return {
     '@context': 'https://schema.org',
     '@type': type,
@@ -1328,6 +1359,17 @@ function buildPageNode(
     breadcrumb: options?.withBreadcrumb ? { '@id': ids.breadcrumb } : undefined,
     mainEntity: options?.withItemList ? { '@id': ids.itemList } : undefined,
     about: options?.about,
+    ...(primaryImageUrl
+      ? {
+          primaryImageOfPage: {
+            '@type': 'ImageObject',
+            url: primaryImageUrl,
+            contentUrl: primaryImageUrl,
+            ...(primaryImageCaption ? { caption: primaryImageCaption } : {}),
+          },
+          image: primaryImageUrl,
+        }
+      : {}),
   };
 }
 
@@ -1428,22 +1470,42 @@ export function buildItemListSchema(
  */
 export function buildBrandSchema(
   brand: { designation_fr?: string; logo?: string | null },
-  baseUrl: string
+  baseUrl: string,
+  opts?: {
+    /** Display name (« BioTech USA » for the catalogue's « BIOTECH USA »). Never changes the @id. */
+    name?: string;
+    /** The brand's own official profiles (site, socials). Only https URLs are kept. */
+    sameAs?: string[];
+  }
 ): object | null {
-  const name = String(brand?.designation_fr ?? '').trim();
-  if (!name) return null;
+  const raw = String(brand?.designation_fr ?? '').trim();
+  if (!raw) return null;
   const base = baseUrl.replace(/\/$/, '');
-  const slug = brandNameToSlug(name);
+  // The @id stays derived from the CATALOGUE name: it is the identifier every product's `brand`
+  // node already carries, so a display-name override must not move it.
+  const slug = brandNameToSlug(raw);
   if (!slug) return null;
   const url = `${base}/${encodeURIComponent(slug)}`;
+  const name = opts?.name?.trim() || raw;
   // getStorageUrl returns '' for an empty path and passes an already-absolute URL through.
   const logo = getStorageUrl(String(brand?.logo ?? '').trim() || undefined);
+  const sameAs = [...new Set((opts?.sameAs ?? [])
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter((value) => {
+      try {
+        const parsed = new URL(value);
+        return parsed.protocol === 'https:' && !parsed.username && !parsed.password;
+      } catch {
+        return false;
+      }
+    }))];
   return {
     '@type': 'Brand',
     '@id': url,
     name,
     url,
     ...(logo ? { logo } : {}),
+    ...(sameAs.length > 0 ? { sameAs } : {}),
   };
 }
 

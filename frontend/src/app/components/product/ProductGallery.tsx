@@ -36,6 +36,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
 import { cn } from '@/app/components/ui/utils';
+import type { ProductImageAltFor } from '@/util/productAlt';
 
 /** A packshot with no image, drawn rather than imported so an empty gallery costs no request. */
 function PackshotPlaceholder() {
@@ -61,8 +62,13 @@ export function ProductGallery({
   railTrailing,
 }: {
   images: string[];
-  /** Base alt text; views after the first get " – vue N" appended. */
-  altBase: string;
+  /**
+   * The alt for one photograph by role — `productImageAlt` bound to the product. The first frame is
+   * the `main` alt (the same string the crawler view gives the cover), the others `gallery`
+   * « … — photo 2 sur 3 », the rail `thumb` « … — miniature 2 ». One builder for both renders, so
+   * Googlebot and a shopper read identical alts for the same image.
+   */
+  altBase: ProductImageAltFor;
   imageTitle?: string;
   /** Stock / promo badges, painted over the top-left corner of the frame. */
   overlayTopLeft?: ReactNode;
@@ -114,7 +120,7 @@ export function ProductGallery({
     step(delta > 0 ? 1 : -1);
   };
 
-  const altFor = (i: number) => (i === 0 ? altBase : `${altBase} – vue ${i + 1}`);
+  const altFor = (i: number) => (i === 0 ? altBase('main') : altBase('gallery', i, count));
 
   const showRail = count > 1 || Boolean(railTrailing);
 
@@ -160,7 +166,7 @@ export function ProductGallery({
             >
               <Image
                 src={image}
-                alt={`${altBase} – miniature ${i + 1}`}
+                alt={altBase('thumb', i, count)}
                 fill
                 loading="lazy"
                 sizes="80px"

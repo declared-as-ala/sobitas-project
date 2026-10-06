@@ -203,6 +203,8 @@ export interface Brand {
   designation_ar?: string;
   logo?: string;
   alt_cover?: string;
+  /** Server-resolved logo alt (brandLogoAlt) — set by selectHomeRailBrands, never by the API. */
+  logo_alt?: string;
   description_fr?: string;
 }
 
@@ -388,6 +390,8 @@ export interface Article {
   /** ISO language code for article body (e.g. fr, ar). */
   content_lang?: string | null;
   cover?: string;
+  /** Admin-written description of the cover photo (Filament "alt_cover"); the <img> alt and og:image:alt. */
+  alt_cover?: string | null;
   created_at?: string;
   updated_at?: string; // Added for cache busting
   publier?: number;

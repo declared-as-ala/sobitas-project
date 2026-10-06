@@ -4,7 +4,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import Link from 'next/link';
 import { Check, Search, X } from 'lucide-react';
 import { useLoading } from '@/contexts/LoadingContext';
-import type { BrandEntry } from './brandEntries';
+import type { DirectoryEntry } from './brandEntries';
 
 /**
  * The A–Z directory: 577 brands, every one of them a crawlable link, on a page that used to be
@@ -52,6 +52,11 @@ import type { BrandEntry } from './brandEntries';
 
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
+/** The anchor id of a letter group. '#' (names starting with a digit) is `marques-chiffres`. */
+function groupId(letter: string): string {
+  return `marques-${letter === '#' ? 'chiffres' : letter}`;
+}
+
 /** Accent-folded, lowercased. Built once per entry — see the docblock. */
 function fold(value: string): string {
   return value
@@ -61,11 +66,17 @@ function fold(value: string): string {
 }
 
 interface BrandDirectoryProps {
-  entries: BrandEntry[];
+  entries: DirectoryEntry[];
   hasCounts: boolean;
   hasStockData: boolean;
   /** How many brands have at least one shippable product. Drives the availability control. */
   inStockBrandCount: number;
+  /**
+   * The band this directory sits on. The sticky toolbar must paint the SAME fill as its band (an
+   * opaque bar of the other surface reads as a stray strip), and the letter hover must paint the
+   * OTHER one or it is invisible. The page alternates bands, so it is the page that knows.
+   */
+  surface?: 'base' | 'sunken';
 }
 
 export function BrandDirectory({
@@ -73,7 +84,11 @@ export function BrandDirectory({
   hasCounts,
   hasStockData,
   inStockBrandCount,
+  surface = 'base',
 }: BrandDirectoryProps) {
+  const toolbarFill = surface === 'sunken' ? 'bg-sunken' : 'bg-canvas';
+  // Full class strings, not a template: Tailwind only emits classes it can read in the source.
+  const letterHover = surface === 'sunken' ? 'group-hover/letter:bg-elevated' : 'group-hover/letter:bg-sunken';
   const [query, setQuery] = useState('');
   const [inStockOnly, setInStockOnly] = useState(false);
   const [activeLetter, setActiveLetter] = useState<string | null>(null);
@@ -95,7 +110,7 @@ export function BrandDirectory({
   }, [haystack, deferredQuery, inStockOnly]);
 
   const groups = useMemo(() => {
-    const map = new Map<string, BrandEntry[]>();
+    const map = new Map<string, DirectoryEntry[]>();
     for (const entry of filtered) {
       const bucket = map.get(entry.letter);
       if (bucket) bucket.push(entry);
@@ -166,9 +181,28 @@ export function BrandDirectory({
     [setLoading, setLoadingMessage]
   );
 
-  const jumpTo = useCallback((letter: string) => {
+  /*
+    ── THE LETTERS ARE LINKS, AND THE CLICK ONLY ADDS THE SMOOTH SCROLL ─────────────────────
+    They were <button>s, which a crawler cannot follow and a reader cannot open, copy or share.
+    Now each is `<a href="#marques-X">` to the group heading's id, so the jump works with no
+    JavaScript at all and every letter is a real, addressable place in the page. The handler
+    only upgrades it: smooth scroll (instant under prefers-reduced-motion), then
+    `history.replaceState` so the URL carries the fragment without one history entry per letter.
+    A modified click falls through to the browser, like any link.
+  */
+  const jumpTo = useCallback((event: React.MouseEvent<HTMLAnchorElement>, letter: string) => {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    const target = groupRefs.current[letter];
+    if (!target) return;
+    event.preventDefault();
     setActiveLetter(letter);
-    groupRefs.current[letter]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    try {
+      window.history.replaceState(window.history.state, '', `#${groupId(letter)}`);
+    } catch {
+      // A sandboxed frame can refuse replaceState; the scroll has already happened.
+    }
   }, []);
 
   return (
@@ -191,7 +225,7 @@ export function BrandDirectory({
         one decision ("narrow this list") and because on a directory this long the controls are
         off-screen for the entire time they are wanted otherwise.
       */}
-      <div className="sticky top-[var(--header-h)] z-30 -mx-4 mb-5 border-b border-rule bg-canvas px-4 py-2 transition-[top] duration-200 motion-reduce:transition-none sm:-mx-6 sm:px-6 sm:py-2.5 lg:-mx-8 lg:px-8">
+      <div className={`sticky top-[var(--header-h)] z-30 -mx-4 mb-5 border-b border-rule ${toolbarFill} px-4 py-2 transition-[top] duration-200 motion-reduce:transition-none sm:-mx-6 sm:px-6 sm:py-2.5 lg:-mx-8 lg:px-8`}>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           <div className="relative min-w-0 flex-1">
             <Search
@@ -215,7 +249,8 @@ export function BrandDirectory({
                 type="button"
                 onClick={() => setQuery('')}
                 aria-label="Effacer la recherche"
-                className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-ink-3 transition-colors hover:text-brand"
+                /* 44px square inside the 44px field: the target is the field's full height. */
+                className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-ink-3 transition-colors hover:text-brand"
               >
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>
@@ -268,50 +303,63 @@ export function BrandDirectory({
         {!isFiltering && (
           <nav
             aria-label="Index alphabétique des marques"
-            /* The rail is 27 x 32px = 864px and a phone is 390, so it scrolls. The mask fades
-               the last ~24px instead of cutting a letter in half, which is the difference
-               between "there is more" and "this is clipped" — the same treatment the homepage
-               brand marquee uses. It is only applied where it is needed. */
-            className="mt-2 flex items-center gap-0.5 overflow-x-auto [-ms-overflow-style:none] [mask-image:linear-gradient(to_right,#000_calc(100%-24px),transparent)] [scrollbar-width:none] lg:[mask-image:none] [&::-webkit-scrollbar]:hidden"
+            /* 27 letters x 44px is ~1,190px and a phone is 390, so below `xl` the rail scrolls.
+               The mask fades the last ~24px instead of cutting a letter in half, which is the
+               difference between "there is more" and "this is clipped". From `xl` (rail ≥1,201px
+               at 1280 with a scrollbar) every letter takes an equal share, gap-free, and nothing
+               scrolls. Not from `lg`: at 1024 an equal share is ~33px wide, under the 44px
+               target floor (measured 06/10/2026: 33.1 x 44 at 1024, 42.5 x 44 at 1280 with gaps).
+
+               Each letter is a 44px-tall TARGET around a 32px VISUAL: the link is the hit area,
+               the inner span is the pill. `mt-0.5 -mb-1.5` gives back the 12px the taller targets
+               add, so the sticky toolbar is exactly as tall as it was with 32px buttons. */
+            className="-mb-1.5 mt-0.5 flex items-center gap-0.5 overflow-x-auto [-ms-overflow-style:none] [mask-image:linear-gradient(to_right,#000_calc(100%-24px),transparent)] [scrollbar-width:none] xl:gap-0 xl:[mask-image:none] [&::-webkit-scrollbar]:hidden"
           >
-            {LETTERS.map((letter) => {
+            {[...LETTERS, '#'].map((letter) => {
               const enabled = availableLetters.has(letter);
               const current = activeLetter === letter;
+              const slot =
+                'flex h-11 w-11 shrink-0 items-center justify-center rounded-lg xl:w-auto xl:min-w-11 xl:flex-1';
+              const pill =
+                'flex h-8 w-8 items-center justify-center rounded-lg font-display text-[12px] font-bold tabular-nums transition-colors';
+              if (!enabled) {
+                // No group, no target: the '#' slot is simply absent, a missing letter is a
+                // dimmed glyph and NOT a link — a fragment with no element behind it is a dead end.
+                if (letter === '#') return null;
+                return (
+                  <span key={letter} className={slot} aria-hidden="true">
+                    <span className={`${pill} cursor-default text-ink-3/40`}>{letter}</span>
+                  </span>
+                );
+              }
               return (
-                <button
+                <a
                   key={letter}
-                  type="button"
-                  disabled={!enabled}
-                  onClick={() => jumpTo(letter)}
-                  aria-label={`Aller aux marques en ${letter}`}
+                  href={`#${groupId(letter)}`}
+                  onClick={(event) => jumpTo(event, letter)}
+                  aria-label={
+                    letter === '#'
+                      ? 'Aller aux marques commençant par un chiffre'
+                      : `Aller aux marques en ${letter}`
+                  }
                   aria-current={current ? 'true' : undefined}
-                  /* `bg-brand text-on-brand` for the current letter, never a scope class: a
-                     scope on a FOCUSABLE element resolves its focus ring in its own scope and
-                     paints it on the parent band's surface — tokens.css says so explicitly. */
-                  className={`h-8 w-8 shrink-0 rounded-lg font-display text-[12px] font-bold tabular-nums transition-colors ${
-                    current
-                      ? 'bg-brand text-on-brand'
-                      : enabled
-                        ? 'text-ink-2 hover:bg-sunken hover:text-brand'
-                        : 'cursor-default text-ink-3/40'
-                  }`}
+                  className={`group/letter ${slot} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus`}
                 >
-                  {letter}
-                </button>
+                  {/* `bg-brand text-on-brand` for the current letter, never a scope class: a
+                      scope on a FOCUSABLE element resolves its focus ring in its own scope and
+                      paints it on the parent band's surface — tokens.css says so explicitly. */}
+                  <span
+                    className={`${pill} ${
+                      current
+                        ? 'bg-brand text-on-brand'
+                        : `text-ink-2 group-hover/letter:text-brand ${letterHover}`
+                    }`}
+                  >
+                    {letter}
+                  </span>
+                </a>
               );
             })}
-            {availableLetters.has('#') && (
-              <button
-                type="button"
-                onClick={() => jumpTo('#')}
-                aria-label="Aller aux marques commençant par un chiffre"
-                className={`h-8 w-8 shrink-0 rounded-lg font-display text-[12px] font-bold transition-colors ${
-                  activeLetter === '#' ? 'bg-brand text-on-brand' : 'text-ink-2 hover:bg-sunken hover:text-brand'
-                }`}
-              >
-                #
-              </button>
-            )}
           </nav>
         )}
       </div>
@@ -340,30 +388,33 @@ export function BrandDirectory({
       ) : (
         <div className="space-y-7" onClick={handleRowClick}>
           {groups.map(([letter, brands]) => (
-            <section
-              key={letter}
-              aria-labelledby={`marques-${letter === '#' ? 'chiffres' : letter}`}
-            >
+            <section key={letter} aria-labelledby={groupId(letter)}>
               {/*
-                The letter is the divider AND the anchor. `scroll-mt` is the sticky toolbar's
-                height plus the header's, or a jump lands the heading underneath both of them.
+                The letter is the divider AND the anchor target. The heading holds the letter and
+                nothing else — it used to carry the count too, so its text read « A31 marques ».
+                The count is a sibling now.
+
+                `scroll-mt` is the header plus the sticky toolbar, which is ~153px tall on a phone
+                (search, then the stock filter on its own row, then the rail) and ~105px from `sm`
+                (one row + the rail). The old fixed `scroll-mt-40` (160px) landed every jump with
+                the heading under the toolbar at both widths.
               */}
-              <h3
-                id={`marques-${letter === '#' ? 'chiffres' : letter}`}
-                data-letter={letter}
-                ref={(el) => {
-                  groupRefs.current[letter] = el;
-                }}
-                className="mb-2 flex scroll-mt-40 items-center gap-3 border-b border-rule pb-1.5"
-              >
-                <span className="font-display font-compressed text-[1.5rem] font-extrabold uppercase leading-none tracking-[-0.02em] text-brand">
+              <div className="mb-2 flex items-center gap-3 border-b border-rule pb-1.5">
+                <h3
+                  id={groupId(letter)}
+                  data-letter={letter}
+                  ref={(el) => {
+                    groupRefs.current[letter] = el;
+                  }}
+                  className="scroll-mt-[calc(var(--header-h)+10rem)] font-display font-compressed text-[1.5rem] font-extrabold uppercase leading-none tracking-[-0.02em] text-brand sm:scroll-mt-[calc(var(--header-h)+7rem)]"
+                >
                   {letter}
-                </span>
-                <span className="flex-1" />
-                <span className="text-[11px] tabular-nums text-ink-3">
+                </h3>
+                <span className="flex-1" aria-hidden="true" />
+                <p className="text-[11px] tabular-nums text-ink-3">
                   {brands.length} marque{brands.length > 1 ? 's' : ''}
-                </span>
-              </h3>
+                </p>
+              </div>
 
               {/*
                 ── FIVE COLUMNS OF TEXT, NOT FIVE COLUMNS OF CARDS ──────────────────────────

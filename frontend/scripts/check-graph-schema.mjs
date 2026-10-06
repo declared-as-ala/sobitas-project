@@ -84,6 +84,8 @@ const brandJsonLd = loadTs(src('util/brandJsonLd.ts'));
 const shopJsonLd = loadTs(src('util/shopJsonLd.ts'));
 const { getBrandSeoEntry } = loadTs(src('config/brandSeoConfig.ts'));
 const { buildBrandMetaTitle } = loadTs(src('util/brandMeta.ts'));
+const { buildBrandPageCopy } = loadTs(src('util/brandTemplate.ts'));
+const { resolveCategoryMetaDescription } = loadTs(src('util/resolveCategorySeo.ts'));
 
 const base = 'https://protein.tn';
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
@@ -169,7 +171,7 @@ const safe = (label, fn) => {
 };
 const buildErrors = [];
 const article = safe('article', () => shipped(builders.buildArticleSchema(ARTICLE, base))) ?? {};
-const brandGraph = safe('brand landing', () => brandJsonLd.buildBrandLandingSchemas({ brand: BRAND, products: PRODUCTS, slug: BRAND_SLUG, baseUrl: base }).map(shipped));
+const brandGraph = safe('brand landing', () => brandJsonLd.buildBrandLandingSchemas({ brand: BRAND, products: PRODUCTS, slug: BRAND_SLUG, baseUrl: base, copy: buildBrandPageCopy({ slug: BRAND_SLUG, brand: BRAND, products: PRODUCTS, facts: { inStockCount: null, priceMin: null, priceMax: null } }) }).map(shipped));
 const categoryPath = '/whey-proteine';
 const categoryGraph = safe('category', () => [
   shipped(builders.buildBreadcrumbListSchema([{ name: 'Accueil', url: '/' }, { name: 'Whey', url: categoryPath }], base, { pageUrl: categoryPath })),
@@ -356,7 +358,10 @@ check('brand-views-agree', '/{brand}', () => {
   // …and the shared function must carry the curated copy, not a generic label.
   const collection = findType(brandGraph, 'CollectionPage')[0];
   assert.equal(collection.name, buildBrandMetaTitle(BRAND.designation_fr));
-  assert.equal(collection.description, getBrandSeoEntry(BRAND_SLUG).metaDescription);
+  // Resolved with unknown facts when the route passes no description: a {token} sentence is dropped,
+  // never printed raw (brandJsonLd.ts). The routes pass brandDescriptionWithFacts' resolved text.
+  assert.equal(collection.description, resolveCategoryMetaDescription(getBrandSeoEntry(BRAND_SLUG).metaDescription,
+    { priceMin: null, priceMax: null, inStockCount: null, productCount: PRODUCTS.length }));
   return true;
 });
 

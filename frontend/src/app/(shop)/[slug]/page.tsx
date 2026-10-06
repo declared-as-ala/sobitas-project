@@ -24,14 +24,15 @@ import { buildBreadcrumbListSchema, buildWebPageSchema } from '@/util/structured
 import { buildBrandLandingSchemas } from '@/util/brandJsonLd';
 import type { Brand, Page } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
-import { buildBrandMetaTitle, buildBrandSocialMetadata } from '@/util/brandMeta';
+import { buildBrandMetaTitle, buildBrandSocialMetadata, pickBrandShareImage } from '@/util/brandMeta';
 import { brandDescriptionWithFacts, loadBrandStockFacts } from '@/util/brandStockFacts';
 import { getBrandCategoryNames } from '@/util/brandCategoryNames';
-import { buildGenericBrandTemplate } from '@/util/brandTemplate';
-import { GenericBrandDetails } from '@/app/(shop)/brand/GenericBrandDetails';
-import { getBrandSeoEntry } from '@/config/brandSeoConfig';
+import { buildBrandPageCopy } from '@/util/brandTemplate';
+import { orderBrandListing } from '@/util/brandListingOrder';
+import { seoRobots } from '@/util/robotsDirectives';
 import { getCmsPageTitleOverride } from '@/config/cmsPageSeoConfig';
-import { BrandSeoHeader, BrandSeoDetails } from '@/app/(shop)/brand/BrandSeoLanding';
+import { BrandHeader } from '@/app/(shop)/brand/BrandHeader';
+import { BrandPageBottom } from '@/app/(shop)/brand/BrandPageBottom';
 
 export type RootSlugPageProps = {
   params: Promise<{ slug: string }>;
@@ -94,10 +95,9 @@ async function metadataForPage(page: Page, slug: string): Promise<Metadata> {
     description: truncateAtWord(description, 155),
     keywords: page.meta_keywords || undefined,
     alternates: { canonical },
-    robots: {
-      index: page.robots_index ?? true,
-      follow: page.robots_follow ?? true,
-    },
+    // seoRobots: Next replaces the layout's robots object wholesale, so a page that sets its own
+    // loses `max-image-preview:large` unless it restates it. See util/robotsDirectives.ts.
+    robots: seoRobots(page.robots_index ?? true, page.robots_follow ?? true),
     openGraph: {
       title: titleOverride || page.og_title?.trim() || title,
       description: (page.og_description?.trim() || description).slice(0, 200),
@@ -119,10 +119,17 @@ async function metadataForBrand(brand: Brand, slug: string): Promise<Metadata> {
   // different titles ("-" vs "—", "Compléments Tunisie" vs "Compléments en Tunisie").
   let brandProductCount = 0;
   let categoryNames: string[] = [];
+  // og:image: a photo of one of the brand's own products (or its logo), not the generic home hero
+  // every brand page used to share. Left undefined on a listing failure — see the catch.
+  let shareImage: ReturnType<typeof pickBrandShareImage> | undefined;
   try {
     const listing = await getCachedProductsByBrand(brand.id);
-    brandProductCount = (listing?.products ?? []).length;
-    categoryNames = getBrandCategoryNames(listing?.products ?? []);
+    // The ORDERED listing, exactly as the page body counts it (orderBrandListing drops nameless
+    // rows), so the <meta description>'s count and families equal the JSON-LD description's.
+    const ordered = orderBrandListing(listing?.products ?? [], brand);
+    brandProductCount = ordered.length;
+    categoryNames = getBrandCategoryNames(ordered);
+    shareImage = pickBrandShareImage(brand, ordered);
   } catch {
     brandProductCount = 1;
   }
@@ -157,10 +164,11 @@ async function metadataForBrand(brand: Brand, slug: string): Promise<Metadata> {
      * failure posture: a transient listing error assumes the brand HAS products and stays
      * indexable, because a wrong noindex is far more expensive than a wrong index.
      */
-    robots: { index: brandProductCount > 0, follow: true },
+    // seoRobots keeps `max-image-preview:large` on the googlebot line — see util/robotsDirectives.ts.
+    robots: seoRobots(brandProductCount > 0, true),
     // Shared with the crawler route, which emitted no openGraph at all and therefore fell back to
     // the site-wide banner — see buildBrandSocialMetadata.
-    ...buildBrandSocialMetadata(brand.designation_fr, canonical, categoryNames, description),
+    ...buildBrandSocialMetadata(brand.designation_fr, canonical, categoryNames, description, shareImage ?? undefined),
   };
 }
 
@@ -214,35 +222,29 @@ export default async function RootSlugPage({ params, searchParams }: RootSlugPag
     // 579 brand renders. The request-scoped cache() wrapper exists for precisely this.
     const result = await getCachedProductsByBrand(brand.id);
     const categories = result.categories || await getCategories();
-    // Resolve each product's subcategory so links + the ItemList below are canonical
-    // /{subcat}/{slug} (not the /shop/{slug} 301). No-op if categories lack sous_categories.
-    const brandProductsList = enrichProductsWithSubcategory(result.products, categories);
+    const baseUrl = getBaseUrl();
+    /*
+     * ── THE SAME FIVE LINES AS x-crawler/category/[slug] ────────────────────────────────────────
+     * Googlebot is rewritten to that route for this URL, so both build the page from the same
+     * inputs in the same order: stock facts → listing order → copy → description → schemas. The
+     * header (BrandHeader) and everything under the grid (BrandPageBottom) are then the same
+     * server components in both renders, so the sections, their order and their wording cannot
+     * drift apart again. See util/brandTemplate.ts (buildBrandPageCopy).
+     */
+    const facts = (await loadBrandStockFacts(brand.id)) ?? { inStockCount: null, priceMin: null, priceMax: null };
+    const ordered = orderBrandListing(result.products, brand);
+    const copy = buildBrandPageCopy({ slug: cleanSlug, brand, products: ordered, facts });
+    const description = await brandDescriptionWithFacts(brand.id, brand.designation_fr, cleanSlug, getBrandCategoryNames(ordered), ordered.length);
+    const brandSchemas = buildBrandLandingSchemas({ brand, products: ordered, slug: cleanSlug, baseUrl, description, copy });
+    // Resolve each product's subcategory so the grid's card links are canonical /{subcat}/{slug}
+    // (not the /shop/{slug} 301). No-op if categories lack sous_categories. Applied to the
+    // ORDERED list, so the grid keeps the listing order the copy above was built from.
+    const brandProductsList = enrichProductsWithSubcategory(ordered, categories);
     const productsData = {
       products: brandProductsList,
       brands: result.brands,
       categories,
     };
-    // Brand landing SEO: Breadcrumb + CollectionPage + ItemList (the product grid). Previously only
-    // a bare BreadcrumbList was emitted, so brand pages (a primary ranking surface) were nearly
-    // schema-less; the ItemList also gives Google the product URLs for internal-link discovery.
-    const baseUrl = getBaseUrl();
-    const brandSeo = getBrandSeoEntry(cleanSlug);
-    const genericBrand = brandSeo ? null : buildGenericBrandTemplate(
-      brand.designation_fr,
-      result.products,
-      (await loadBrandStockFacts(brand.id)) ?? { inStockCount: null, priceMin: null, priceMax: null }
-    );
-    // Shared with x-crawler/category, which serves this same URL to bots — the two had drifted to
-    // different CollectionPage names and only one of them carried the curated description.
-    // See util/brandJsonLd.ts.
-    const brandSchemas = buildBrandLandingSchemas({
-      brand,
-      products: Array.isArray(brandProductsList) ? brandProductsList : [],
-      slug: cleanSlug,
-      baseUrl,
-      description: await brandDescriptionWithFacts(brand.id, brand.designation_fr, cleanSlug, getBrandCategoryNames(result.products), result.products.length),
-      faqs: genericBrand?.faqs,
-    });
 
     return (
       <>
@@ -274,9 +276,10 @@ export default async function RootSlugPage({ params, searchParams }: RootSlugPag
               : [...result.brands, brand]
           }
           initialBrand={brand.id}
-          genericBrand={genericBrand}
-          categorySeoLanding={brandSeo ? <BrandSeoHeader entry={brandSeo} /> : undefined}
-          categorySeoLandingBottom={brandSeo ? <BrandSeoDetails entry={brandSeo} /> : genericBrand ? <GenericBrandDetails template={genericBrand} /> : undefined}
+          brandLabel={copy.displayName}
+          productHeadingOverride={copy.gridHeading}
+          categorySeoLanding={<BrandHeader copy={copy} />}
+          categorySeoLandingBottom={<BrandPageBottom copy={copy} />}
         />
       </>
     );

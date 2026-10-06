@@ -8,7 +8,8 @@ import { buildBrandAlt } from '@/util/productAlt';
 import type { BrandEntry } from './brandEntries';
 
 /**
- * The logo tier: the ~45 brands that have artwork in the admin AND products behind them.
+ * The logo tier: up to 24 of the ~40 brands that have artwork in the admin AND products behind
+ * them, in the order page.tsx picks (search demand first — see FEATURED_ORDER).
  *
  * ── WHY `hasLogo` IS THE SELECTION RULE ────────────────────────────────────────────────────
  * The same reasoning the homepage brand strip already runs on. A logo in the admin means someone
@@ -28,7 +29,30 @@ import type { BrandEntry } from './brandEntries';
  * "Qui sommes-nous" body). One island holding one Set of failed ids is the cost of never showing
  * that; the fallback is the brand name set in the compressed display face, which reads as a
  * deliberate wordmark rather than as a failure.
+ *
+ * ── ONE URL PER LOGO, AND IT IS THE SAME ONE THE JSON-LD NAMES (05/10/2026) ────────────────
+ * The plates went through the image optimizer with `sizes="180px"`, so each <img> carried a
+ * 16-entry srcset of `/_next/image?url=…&w=…` variants up to 1920px — about 2.6 KB of HTML per
+ * plate for a box that is never more than ~200px wide — and Google Images saw a different URL
+ * from the `Brand.logo` in the page's own JSON-LD. `unoptimized` makes `src` exactly
+ * `getStorageUrl(logo)`, the protein.tn/media URL the ItemList's Brand nodes already point at:
+ * one image, one URL, two signals that agree. The cost is that a plate ships the file as stored.
+ * Most admin logos are 2–16 KB WebP, but not all (06/10/2026): Muscle Care is 131 KB at 937×500,
+ * William Bonac 77 KB at 1037×1278. The plates lazy-load; the fix for a heavy one is a re-export
+ * at ≤400 px in the admin, and `node scripts/audit-brand-copy-live.mjs` lists every logo over
+ * 20 KB.
+ *
+ * The alt is `brand.logoAlt` (brandLogoAlt, resolved on the server) — « Logo Optimum Nutrition »,
+ * or a curated override when the admin file is not the wordmark (Big Ramy Labs' is Red Rex).
+ * `buildBrandAlt(name)` is the fallback. The previous « {NAME} — marque
+ * de compléments alimentaires en Tunisie | Protein.tn » was being quoted by Google as the page's
+ * snippet, starting with a gym-equipment brand.
  */
+
+/** The logo well's box: `h-14` tall, and roughly the plate's content width at 2–6 columns. */
+const LOGO_BOX_WIDTH = 160;
+const LOGO_BOX_HEIGHT = 56;
+
 export function FeaturedBrands({ brands }: { brands: BrandEntry[] }) {
   const [failed, setFailed] = useState<Set<number>>(() => new Set());
 
@@ -57,13 +81,10 @@ export function FeaturedBrands({ brands }: { brands: BrandEntry[] }) {
                 <span className="pt-logo-well flex h-14 w-full items-center justify-center rounded-lg px-2">
                   <Image
                     src={logoUrl}
-                    alt={buildBrandAlt(brand.name)}
-                    width={200}
-                    height={100}
-                    /* The plate is a fixed-height box at every width, so the logo's rendered
-                       width is effectively constant — one `sizes` value, no `vw` maths to
-                       re-derive when the column count changes, and no extra optimizer variants. */
-                    sizes="180px"
+                    alt={brand.logoAlt || buildBrandAlt(brand.name)}
+                    width={LOGO_BOX_WIDTH}
+                    height={LOGO_BOX_HEIGHT}
+                    unoptimized
                     className="max-h-full max-w-[86%] object-contain transition-transform duration-300 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
                     loading="lazy"
                     onError={() =>

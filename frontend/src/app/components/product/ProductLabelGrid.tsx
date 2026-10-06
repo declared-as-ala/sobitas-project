@@ -37,6 +37,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
+import type { ProductImageAltFor } from '@/util/productAlt';
 
 /** Cells a row of `cols` would leave empty for `count` items — 0 when the last row is full. */
 function emptyCells(count: number, cols: number): number {
@@ -44,7 +45,11 @@ function emptyCells(count: number, cols: number): number {
   return remainder === 0 ? 0 : cols - remainder;
 }
 
-export function ProductLabelGrid({ images, altBase }: { images: string[]; altBase: string }) {
+/**
+ * `altBase` is `productImageAlt` bound to the product; each tile reads the `label` role
+ * « … — étiquette 2 », the same string the crawler view gives that photograph.
+ */
+export function ProductLabelGrid({ images, altBase }: { images: string[]; altBase: ProductImageAltFor }) {
   const [open, setOpen] = useState(-1);
   const count = images.length;
 
@@ -104,7 +109,7 @@ export function ProductLabelGrid({ images, altBase }: { images: string[]; altBas
             >
               <Image
                 src={image}
-                alt={`${altBase} – étiquette ${i + 1}`}
+                alt={altBase('label', i, count)}
                 fill
                 loading="lazy"
                 sizes="(min-width: 1024px) 400px, (min-width: 640px) 30vw, 45vw"
@@ -159,7 +164,7 @@ export function ProductLabelGrid({ images, altBase }: { images: string[]; altBas
           <div className="relative h-full max-h-[86vh] w-full max-w-3xl" onClick={(event) => event.stopPropagation()}>
             <Image
               src={images[open]}
-              alt={`${altBase} – étiquette ${open + 1}`}
+              alt={altBase('label', open, count)}
               fill
               sizes="100vw"
               quality={95}

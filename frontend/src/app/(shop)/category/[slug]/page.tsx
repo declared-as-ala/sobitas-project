@@ -4,6 +4,7 @@ import { unstable_cache } from 'next/cache';
 import { htmlToText, truncateAtWord } from '@/util/sanitizeProductHtml';
 import { notFound, permanentRedirect, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
+import { seoRobots } from '@/util/robotsDirectives';
 import { getCategories, getShopFacets, toSiteMedia } from '@/services/api';
 // Request-scoped cache: generateMetadata and the page body below both need this category, and
 // two separate calls could fail independently (metadata 429 + body OK = 200, generic title,
@@ -794,8 +795,8 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
       // ~500-word guides and 9–12 request-only products, yet served noindex. Kept in step with the
       // sitemap's nav gate (util/sitemapSources.ts), which now submits guided listings too.
       robots: !indexable || (nothingBuyableHere && !protectedByDemand && !hasEditorialGuide)
-        ? { index: false, follow: true }
-        : { index: true, follow: true },
+        ? seoRobots(false, true)
+        : seoRobots(true, true),
       openGraph: {
         title: ogTitleMeta,
         description: ogDescMeta.slice(0, 200),
@@ -816,7 +817,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     if (getErrorStatus(e) === 404) {
       return {
         title: 'Catégorie introuvable | Proteine Tunisie',
-        robots: { index: false, follow: false },
+        robots: seoRobots(false, false),
       };
     }
     // TRANSIENT (429 from the shared per-IP bucket, 5xx, timeout). This catch is THE

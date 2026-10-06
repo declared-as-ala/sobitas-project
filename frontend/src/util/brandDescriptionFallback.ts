@@ -1,16 +1,22 @@
 import { DELIVERY } from '@/util/company';
+import { humanizeBrandName } from '@/util/brandName';
 
 /**
- * Unique French description fallback for brand landing pages.
+ * Unique French description fallback for brand landing pages (the /shop brand-filter panel).
  *
  * WHY: brand pages whose `description_fr` is empty render no copy at all, leaving a thin page
  * that Google buckets as "Crawled - currently not indexed". This builds a distinct paragraph
  * from REAL data derived from the brand's own product list (product count, real category names,
  * real min price). It never fabricates: missing values are simply omitted from the sentence.
+ *
+ * 05/10/2026: the closing sentence used to promise « Produits 100% authentiques et importés
+ * officiellement ». Nothing on protein.tn sources an import or distribution status for any brand,
+ * so it is gone; the count is « au catalogue », not « disponibles », because most references are
+ * on request rather than in stock.
  */
 
 export interface BrandDescriptionFallbackInput {
-  /** Brand display name, e.g. "Optimum Nutrition". */
+  /** Brand name, e.g. "Optimum Nutrition" (an all-caps database name is re-cased). */
   name: string;
   /** Number of products this brand has on the page (real count). */
   productCount?: number;
@@ -38,7 +44,7 @@ export function generateBrandDescriptionFallback({
   topCategories = [],
   priceMin,
 }: BrandDescriptionFallbackInput): string {
-  const brand = (name || '').trim() || 'cette marque';
+  const brand = humanizeBrandName(name) || 'cette marque';
   const count = typeof productCount === 'number' && productCount > 0 ? productCount : null;
   const cats = frenchList(uniqueTrimmed(topCategories, 3));
   const hasPrice = typeof priceMin === 'number' && Number.isFinite(priceMin) && priceMin > 0;
@@ -46,8 +52,8 @@ export function generateBrandDescriptionFallback({
   // Sentence 1 — offer + real count + real min price.
   const s1parts: string[] = [
     count
-      ? `Retrouvez ${count} produits ${brand} disponibles en Tunisie`
-      : `Retrouvez les produits ${brand} disponibles en Tunisie`,
+      ? `Retrouvez ${count} produit${count > 1 ? 's' : ''} ${brand} au catalogue`
+      : `Retrouvez les produits ${brand} au catalogue`,
   ];
   if (hasPrice) s1parts.push(`à partir de ${Math.round(priceMin as number)} DT`);
   const s1 = `${s1parts.join(' ')}.`;
@@ -55,9 +61,8 @@ export function generateBrandDescriptionFallback({
   // Sentence 2 — real categories the brand covers (topical depth + internal signals).
   const s2 = cats ? `La marque ${brand} est présente dans nos gammes ${cats}.` : '';
 
-  // Sentence 3 — trust close (brand-consistent, no fabricated stats).
-  const s3 =
-    `Produits 100% authentiques et importés officiellement, avec livraison ${DELIVERY.windowLabel} partout en Tunisie et paiement à la livraison.`;
+  // Sentence 3 — delivery terms, from the one place they are declared.
+  const s3 = `Livraison ${DELIVERY.windowLabel} partout en Tunisie${DELIVERY.cashOnDelivery ? ', paiement à la livraison' : ''}.`;
 
   return [s1, s2, s3].filter(Boolean).join(' ');
 }

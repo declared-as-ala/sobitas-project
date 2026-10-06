@@ -16,6 +16,7 @@ import { toBlogIndexArticle } from '@/util/blogIndex';
 import { BlogPageClient } from './BlogPageClient';
 import { BlogListSkeleton } from './BlogListSkeleton';
 import { BlogResearchSection } from './BlogResearchSection';
+import { seoRobots } from '@/util/robotsDirectives';
 
 const ARTICLES_PER_PAGE = 9;
 
@@ -56,10 +57,9 @@ export async function generateMetadata(props: { searchParams?: BlogSearchParams 
       description: 'Guides, conseils prise de masse, choix whey et créatine.',
       images: ['/og-banner.jpg'],
     },
-    robots: {
-      index: pageNum === 1,
-      follow: true,
-    },
+    // seoRobots: a bare { index, follow } replaces the layout's googleBot line and drops
+    // max-image-preview:large (util/robotsDirectives.ts) — this page lists every blog cover.
+    robots: seoRobots(pageNum === 1, true),
   };
 }
 

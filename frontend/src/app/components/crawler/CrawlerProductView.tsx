@@ -33,7 +33,7 @@ import { buildComparison } from '@/util/productComparison';
 import { ComparisonNutrition } from '@/app/components/product/ComparisonNutrition';
 import { visibleNutrients } from '@/util/productComparisonFacts';
 import { thumbnailUrl, videoId, videoTitle, watchUrl } from '@/util/officialVideo';
-import { buildProductAlt } from '@/util/productAlt';
+import { buildProductAlt, productImageAlt } from '@/util/productAlt';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
 import { splitHighlights } from '@/util/productHighlights';
 import { mergeProductContent } from '@/util/productDescriptionSections';
@@ -44,6 +44,7 @@ import {
   productSourceGallery,
   productSourceNutritionHtml,
   productSourceSections,
+  splitPackshotsFromLabels,
 } from '@/util/productSourceFacts';
 import type { Product } from '@/types';
 import { humanProductHeading } from '@/util/productMetaDescription';
@@ -164,10 +165,40 @@ export function CrawlerProductView({
    * on the only render Google reads — once as the hero and once as "photo 1/7" — with two
    * different alt strings competing for one image. The human page dedups the same list with a Set
    * (ProductDetailClient.tsx:462-468); this is that rule, expressed against the resolved URL
-   * because `cover` has already been through getStorageUrl. The "photo i/n" numbering follows the
-   * filtered array, so it renumbers itself.
+   * because `cover` has already been through getStorageUrl. The alt numbering is NOT this array's:
+   * it is the human page's (see `galleryAlt` below).
    */
   const sourceGallery = productSourceGallery(product).filter((url) => getStorageUrl(url) !== cover);
+  /*
+   * ONE ALT PER PHOTOGRAPH, ON BOTH RENDERS. The human page lays the same photographs out as a
+   * carousel of packshots plus a grid of label shots (ProductDetailClient → galleryImagePaths →
+   * splitPackshotsFromLabels), and names each by its role there: « … — photo 2 sur 2 »,
+   * « … — étiquette 3 ». This rebuilds that exact order — cover, legacy `images`, source gallery,
+   * deduped — so every <img> below carries the string the shopper's markup gives the same file.
+   */
+  const legacyImages: unknown[] = Array.isArray((product as { images?: unknown }).images)
+    ? ((product as { images?: unknown[] }).images ?? [])
+    : [];
+  const shopperGallery = splitPackshotsFromLabels(
+    [...new Set(
+      [product.cover, ...legacyImages, ...productSourceGallery(product)]
+        .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+        .map((value) => value.trim())
+    )]
+      .map((path) => getStorageUrl(path))
+      .filter((url) => url.length > 0)
+  );
+  const galleryAlt = (url: string, i: number, total: number): string => {
+    const resolved = getStorageUrl(url);
+    const packshot = shopperGallery.packshots.indexOf(resolved);
+    if (packshot === 0) return productImageAlt(product, { role: 'main' });
+    if (packshot > 0) {
+      return productImageAlt(product, { role: 'gallery', index: packshot, total: shopperGallery.packshots.length });
+    }
+    const label = shopperGallery.labels.indexOf(resolved);
+    if (label >= 0) return productImageAlt(product, { role: 'label', index: label, total: shopperGallery.labels.length });
+    return productImageAlt(product, { role: 'gallery', index: i, total });
+  };
   const sourceAttribution = productSourceAttribution(product);
 
   return (
@@ -207,7 +238,7 @@ export function CrawlerProductView({
             src={cover}
             width={640}
             height={640}
-            alt={buildProductAlt(product as any)}
+            alt={buildProductAlt(product)}
             className="my-4 h-auto w-full max-w-md rounded border"
           />
         )}
@@ -373,9 +404,7 @@ export function CrawlerProductView({
                       width={600}
                       height={400}
                       loading="lazy"
-                      alt={`${product.designation_fr ?? 'Produit'} — valeurs nutritionnelles${
-                        nutritionImages.length > 1 ? ` (${i + 1}/${nutritionImages.length})` : ''
-                      }`}
+                      alt={productImageAlt(product, { role: 'nutrition', index: i, total: nutritionImages.length })}
                       className="h-auto w-full max-w-lg rounded border"
                     />
                   </li>
@@ -413,7 +442,7 @@ export function CrawlerProductView({
                     width={300}
                     height={300}
                     loading="lazy"
-                    alt={`${product.designation_fr ?? 'Produit'} — photo ${i + 1}/${sourceGallery.length}`}
+                    alt={galleryAlt(url, i, sourceGallery.length)}
                     className="h-auto w-full rounded border"
                   />
                 </li>

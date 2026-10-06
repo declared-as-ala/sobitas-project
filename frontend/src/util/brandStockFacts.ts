@@ -3,7 +3,8 @@ import { getShopPage } from '@/services/api';
 import { EMPTY_SHOP_QUERY } from '@/util/shopQuery';
 import { isInStock } from '@/util/cartStock';
 import { getEffectivePrice } from '@/util/productPrice';
-import { buildBrandMetaDescription, buildGenericBrandMetaDescription, resolveBrandMetaDescription } from '@/util/brandMeta';
+import { buildGenericBrandMetaDescription, withCashOnDeliveryTail } from '@/util/brandMeta';
+import { resolveCategoryMetaDescription } from '@/util/resolveCategorySeo';
 import { getBrandSeoEntry } from '@/config/brandSeoConfig';
 
 /** Brand-wide count and cheapest buyable price, independent of visitor filters. */
@@ -44,7 +45,17 @@ export async function loadBrandStockFacts(brandId: number) {
   });
 }
 
-/** Only curated descriptions with tokens need the extra API fact lookup. */
+/**
+ * The brand page's <meta description>, resolved against live facts.
+ *
+ *   - Curated: the entry's text with {prixMin} {prixMax} {nbEnStock} {nbProduits} resolved (a
+ *     sentence whose fact is unknown today is dropped whole), then rule D3 (withCashOnDeliveryTail):
+ *     a resolved text of 130 characters or fewer gains « Paiement à la livraison. ». D3 applies to
+ *     curated descriptions without tokens too. Only a description with tokens costs the facts lookup.
+ *   - Generic: the live sentence builder, under the brand's display name.
+ *
+ * `productCount` is the listing total the caller already holds; it feeds {nbProduits}.
+ */
 export async function brandDescriptionWithFacts(
   brandId: number,
   brandName: string,
@@ -52,13 +63,18 @@ export async function brandDescriptionWithFacts(
   categoryNames: string[],
   productCount?: number
 ): Promise<string> {
-  const raw = buildBrandMetaDescription(brandName, categoryNames);
   const configured = getBrandSeoEntry(slug);
-  if (configured && !configured.metaDescription.includes('{')) return raw;
+  const count = typeof productCount === 'number' && productCount > 0 ? productCount : null;
+  if (configured) {
+    if (!configured.metaDescription.includes('{')) return withCashOnDeliveryTail(configured.metaDescription);
+    const facts = await loadBrandStockFacts(brandId);
+    return withCashOnDeliveryTail(resolveCategoryMetaDescription(configured.metaDescription, {
+      priceMin: facts?.priceMin ?? null,
+      priceMax: facts?.priceMax ?? null,
+      inStockCount: facts?.inStockCount ?? null,
+      productCount: count,
+    }));
+  }
   const facts = await loadBrandStockFacts(brandId);
-  if (!configured) return buildGenericBrandMetaDescription(brandName, categoryNames, productCount, facts);
-  return resolveBrandMetaDescription(brandName, categoryNames, {
-    priceMin: facts?.priceMin ?? null,
-    inStockCount: facts?.inStockCount ?? null,
-  });
+  return buildGenericBrandMetaDescription(brandName, categoryNames, productCount, facts);
 }

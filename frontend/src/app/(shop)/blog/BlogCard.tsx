@@ -63,8 +63,14 @@ export function BlogCard({
         >
           {article.cover ? (
             <SafeImage
-              src={getStorageUrl(article.cover, article.updated_at || article.created_at)}
-              alt={title || 'Article'}
+              /* No cache-bust argument: the source URL is the one the sitemap, og:image and the
+                 Article JSON-LD declare (getStorageUrl → /media/…?m=1), and a per-article
+                 ?v=timestamp made it a different URL on every edit. A card still renders through the
+                 optimizer (/_next/image?url=<that URL>, resized for a grid cell), so the <img> src is
+                 NOT the declared URL here; the article page's hero is the one served as is. The
+                 admin-written alt_cover describes the photo; the title is only the fallback. */
+              src={getStorageUrl(article.cover)}
+              alt={article.alt_cover?.trim() || title || 'Article'}
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transform-none motion-reduce:transition-none"
               sizes={

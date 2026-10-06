@@ -13,6 +13,7 @@ import { PageHeader } from '@/app/components/PageHeader';
 import { BlogCard } from '@/app/(shop)/blog/BlogCard';
 import { BlogPager } from '@/app/(shop)/blog/BlogPager';
 import { EmptyState } from '@/app/components/EmptyState';
+import { seoRobots } from '@/util/robotsDirectives';
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -49,12 +50,12 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
       title,
       description,
       alternates: { canonical },
-      robots: {
-        // Tag pages are thin / duplicate index-bloat by default — index only when the tag's
-        // SEO config explicitly opts in.
-        index: data.tag.seo?.robots?.index === true,
-        follow: data.tag.seo?.robots?.follow ?? true,
-      },
+      // Tag pages are thin / duplicate index-bloat by default — index only when the tag's
+      // SEO config explicitly opts in. seoRobots keeps max-image-preview:large (robotsDirectives.ts).
+      robots: seoRobots(
+        data.tag.seo?.robots?.index === true,
+        data.tag.seo?.robots?.follow ?? true,
+      ),
       openGraph: {
         title,
         description,

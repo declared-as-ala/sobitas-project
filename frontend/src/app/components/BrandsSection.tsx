@@ -68,7 +68,7 @@ function BrandTile({ brand }: { brand: Brand }) {
     logoUrl && !imageError ? (
       <Image
         src={logoUrl}
-        alt={buildBrandAlt(brand.designation_fr, brand.alt_cover)}
+        alt={brand.logo_alt || buildBrandAlt(brand.designation_fr, brand.alt_cover)}
         width={200}
         height={100}
         sizes="130px"

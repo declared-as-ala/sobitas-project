@@ -72,6 +72,9 @@ export function CrawlerCategoryView({
   brandLinks = null,
   pagination = null,
   kind,
+  headerSlot = null,
+  afterGridSlot = null,
+  gridHeadingOverride,
 }: {
   title: string;
   /** Optional editorial H1 for a measured landing page; `title` still names the taxonomy. */
@@ -107,16 +110,37 @@ export function CrawlerCategoryView({
    */
   pagination?: { currentPage: number; totalPages: number; buildHref: (page: number) => string } | null;
   kind: 'category' | 'subcategory' | 'brand';
+  /**
+   * Rendered INSTEAD of the default `<header><h1>` — and it must carry the page's one <h1>
+   * itself. The brand route passes the same server component (BrandHeader) the shopper route
+   * mounts, so the H1, the lead and the logo are the same bytes for both user agents.
+   */
+  headerSlot?: React.ReactNode;
+  /**
+   * Rendered right after the product list, its pager and `brandLinks`, before the comparison,
+   * sub-category, guide, FAQ and related-category sections. The brand route passes BrandPageBottom
+   * here — the same component the shopper route renders under its grid.
+   */
+  afterGridSlot?: React.ReactNode;
+  /** Replaces the computed grid heading (the brand route passes `copy.gridHeading`, display-cased). */
+  gridHeadingOverride?: string;
 }) {
   const productLinks = (products ?? [])
     .filter((p) => p && p.designation_fr)
     .map((p) => {
       const price = getPriceDisplay(p);
       return {
-        name: p.designation_fr as string,
+        // Raw designation, trimmed: the human ProductCard prints the raw name too, so the two
+        // renders keep naming each product the same way (several are stored with a leading space).
+        name: (p.designation_fr as string).trim(),
         url: getProductLink(p),
         cover: p.cover ? getStorageUrl(p.cover) : '',
-        alt: buildProductAlt(p),
+        // The brand only from the product's own relation (brand listings attach it via
+        // orderBrandListing), exactly what the shopper ProductCard reads. NOT from a brand_id lookup:
+        // the human category and /shop grids have no brand list to look it up in (`light=1`), so a
+        // lookup here gave 5 of the 20 card images on /creatine a different alt per user agent
+        // (measured on a local production build, 06/10/2026). buildProductAlt skips the brand when the name already contains it.
+        alt: buildProductAlt(p, { brand: p.brand?.designation_fr ?? null }),
         // Keep the exact TND value visible beside every crawlable product link.
         price: formatTnd(price.finalPrice),
         oldPrice: price.hasPromo && price.oldPrice ? formatTnd(price.oldPrice) : null,
@@ -156,12 +180,14 @@ export function CrawlerCategoryView({
     grid label has nothing left to add.
   */
   const geoTitle = /\ben\s+tunisie\b/i.test(title) ? title : `${title} en Tunisie`;
+  const n = productLinks.length;
   const gridHeading =
-    productLinks.length === 0
+    gridHeadingOverride ||
+    (n === 0
       ? geoTitle
       : geoTitle === heading
-        ? `Produits (${productLinks.length})`
-        : `${geoTitle} : ${productLinks.length} produits au catalogue`;
+        ? `Produits (${n})`
+        : `${geoTitle} : ${n} produit${n > 1 ? 's' : ''} au catalogue`);
 
   /*
     Same gate, same rows, same position as the human render — see COMPARISON_SLUGS above.
@@ -232,9 +258,11 @@ export function CrawlerCategoryView({
         </ol>
       </nav>
 
-      <header>
-        <h1 className="text-2xl font-bold">{heading}</h1>
-      </header>
+      {headerSlot ?? (
+        <header>
+          <h1 className="text-2xl font-bold">{heading}</h1>
+        </header>
+      )}
 
       {/* Complete product link list — the crawlable internal-link graph the client grid
           hides behind hydration.
@@ -334,6 +362,8 @@ export function CrawlerCategoryView({
       )}
 
       {brandLinks}
+
+      {afterGridSlot}
 
       {/* Price comparison — directly after the product list and its pager, before the guide.
           Identical markup to the human render: CreatineComparisonTable is a pure server component

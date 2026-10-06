@@ -9,6 +9,7 @@ import { excludeLinkedDestinations, targetsFromTaxonomy, type LinkTarget } from 
 import { getCachedArticleDetails as getArticleDetails } from '@/services/getCachedProductDetails';
 import { getStorageUrl, toSiteMedia } from '@/services/api';
 import { resolveCanonicalUrl } from '@/util/canonical';
+import { seoRobots } from '@/util/robotsDirectives';
 import { buildMetaDescription, htmlToText } from '@/util/sanitizeProductHtml';
 import { resolveArticleLanguage, buildArticleTitle, localityHint, isArabicArticle } from '@/util/articleLanguage';
 import { buildArticleSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
@@ -170,11 +171,12 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     const article = await getArticleDetails(slug);
     const seoOverlay = getBlogSeoEntry(slug);
     // Same-origin like every rendered image (toSiteMedia): the CMS stores absolute admin URLs.
+    const coverImageUrl = article.cover ? getStorageUrl(article.cover) : '';
     const imageUrl = toSiteMedia(
       article.seo?.open_graph?.image ||
       article.seo?.twitter?.image ||
       article.seo?.image ||
-      (article.cover ? getStorageUrl(article.cover) : '')
+      coverImageUrl
     );
     const description = stripHtml(article.description_fr || article.description || '');
     // The headline, resolved BEFORE the description because the description is built relative to
@@ -241,10 +243,12 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       title: { absolute: title },
       // localityHint reserves space before word-safe truncation, including the ellipsis.
       description: descriptionWithTunisia,
-      robots: {
-        index: article.seo?.robots?.index ?? article.seo_robots_index ?? true,
-        follow: article.seo?.robots?.follow ?? article.seo_robots_follow ?? true,
-      },
+      // seoRobots, not a bare { index, follow }: Next replaces the root layout's robots object
+      // wholesale, so the bare form dropped googleBot max-image-preview:large on every post.
+      robots: seoRobots(
+        article.seo?.robots?.index ?? article.seo_robots_index ?? true,
+        article.seo?.robots?.follow ?? article.seo_robots_follow ?? true
+      ),
       alternates: {
         canonical: canonicalUrl,
         // Declare the language this article is ACTUALLY written in. 31 of 100 posts are Arabic and
@@ -256,7 +260,11 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       openGraph: {
         title: seoOverlay?.headline ? title : article.seo?.open_graph?.title || title,
         description: socialDescription(seoOverlay?.metaDescription || article.seo?.open_graph?.description),
-        images: imageUrl ? [imageUrl] : ['/og-banner.jpg'],
+        // The admin-written cover description, as on the rendered <img>; the title only as fallback,
+        // and also when a CMS social image replaces the cover (alt_cover describes the cover photo).
+        images: imageUrl
+          ? [{ url: imageUrl, alt: (imageUrl === coverImageUrl && article.alt_cover?.trim()) || title }]
+          : ['/og-banner.jpg'],
         type: 'article',
         url: canonicalUrl,
         locale: articleLanguage.ogLocale,
@@ -275,7 +283,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     if (getErrorStatus(error) === 404) {
       return {
         title: 'Article introuvable | Blog Protéine Tunisie',
-        robots: { index: false, follow: false },
+        robots: seoRobots(false, false),
       };
     }
     // TRANSIENT (429/5xx/network). Swallowing it here is what emitted a cacheable HTTP 200 with

@@ -20,6 +20,8 @@ interface FlashDealProduct extends Product {
   quantityInStock?: number;
   availableStock?: number;
   force_out_of_stock?: number | boolean;
+  /** Injected by the homepage (`withBrand`): listing payloads carry only `brand_id`. */
+  brandName?: string;
 }
 
 export const FlashDealCard = memo(function FlashDealCard({ product }: { product: FlashDealProduct }) {
@@ -78,7 +80,7 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: { product:
           {image ? (
             <Image
               src={image}
-              alt={buildProductAlt(product, { name })}
+              alt={buildProductAlt(product, { name, brand: product.brandName })}
               fill
               sizes="(max-width: 639px) 80vw, (max-width: 1279px) 45vw, 320px"
               quality={80}

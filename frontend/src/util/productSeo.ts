@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { getStorageUrl, toSiteMedia } from '@/services/api';
 import type { Product } from '@/types';
+import { productImageAlt } from '@/util/productAlt';
 
 /** Absolute HTTPS image URL for OG/Twitter when the API already exposes one. */
 export function productImageForMetadata(product: Product): string | undefined {
@@ -25,7 +26,9 @@ export function buildShopProductSocialMetadata(params: {
 }): Pick<Metadata, 'openGraph' | 'twitter'> {
   const { product, title, description, canonicalUrl } = params;
   const imageUrl = productImageForMetadata(product);
-  const alt = (product.seo?.image_alt || product.alt_cover || product.designation_fr || 'Produit').trim();
+  // The page's main-image alt, from the builder both renders use (util/productAlt.ts) — not the
+  // backend's « NAME — Brand — Tunisie » template, which doubled the brand and kept mojibake.
+  const alt = productImageAlt(product, { role: 'main' });
   const desc = description.trim();
   const openGraph: NonNullable<Metadata['openGraph']> = {
     type: 'website',

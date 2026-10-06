@@ -134,7 +134,7 @@ function splitContentForMiddleInsert(html: string): [string, string] {
  * of thing repeated fifteen times. `check-tap-targets` measured the tallest of them at 34px and
  * the shortest at 26 — all three under the 44px floor.
  *
- * The shape comes from `BrandSeoLanding`'s category pill, which is the same control on another
+ * The shape comes from the brand page's category pill (`BrandSeoLanding`, now `BrandPageBottom`'s CHIP), which is the same control on another
  * page and already correct: `min-h-11`, `border-hairline`, ink and brand tokens. The only
  * distinction worth keeping is ground — a tag is quieter than a category — so that is the one
  * thing the variant changes.
@@ -409,8 +409,17 @@ export function ArticleDetailClient({
             {article.cover && (
               <div className="relative w-full h-48 sm:h-64 md:h-80 lg:h-96 mb-6 sm:mb-8 overflow-hidden">
                 <SafeImage
-                  src={getStorageUrl(article.cover, article.updated_at || article.created_at)}
-                  alt={article.designation_fr || 'Article cover'}
+                  /* Same URL as og:image, the sitemap and the Article JSON-LD in the <img src>: no
+                     ?v= cache-bust, and `overrideSrc`, because next/image would otherwise write
+                     /_next/image?url=… there — a second URL for the same cover. NOT `unoptimized`:
+                     that also drops the srcset, and every phone then downloads the stored
+                     1280×720 original as its LCP image (83,560 bytes for whey-protein-en-tunisie)
+                     instead of the optimizer's AVIF (34,855 bytes at w=828, 44,678 at w=1080;
+                     originals 57–105 KB vs 22–56 KB, 06/10/2026). The admin-written alt_cover
+                     rather than the headline. */
+                  src={getStorageUrl(article.cover)}
+                  overrideSrc={getStorageUrl(article.cover)}
+                  alt={article.alt_cover?.trim() || decodeHtmlEntities(article.designation_fr || '') || 'Article'}
                   fill
                   className="object-cover"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 896px"

@@ -31,6 +31,7 @@ import { getStorageUrl } from '@/services/api';
 import { getEffectivePrice } from '@/util/productPrice';
 import { isInStock } from '@/util/cartStock';
 import { generateBrandDescriptionFallback } from '@/util/brandDescriptionFallback';
+import { buildBrandAlt } from '@/util/productAlt';
 import type { buildGenericBrandTemplate } from '@/util/brandTemplate';
 import {
   buildShopUrl,
@@ -66,6 +67,11 @@ interface ShopPageClientProps {
   categorySeoLanding?: React.ReactNode;
   /** Optional SEO block for bottom of page (Catégories associées + Produits phares). Rendered after product grid. */
   categorySeoLandingBottom?: React.ReactNode;
+  /** Brand pages: the display-cased name for the last breadcrumb (`copy.displayName`), so the
+   *  visible trail says « Optimum Nutrition » like the crawler render, not the raw back-office name. */
+  brandLabel?: string;
+  /** Brand pages: the grid's (sr-only) heading, shared with the crawler render (`copy.gridHeading`). */
+  productHeadingOverride?: string;
 
   /*
    * ── SERVER-DRIVEN MODE: THE THREE PROPS BELOW TRAVEL TOGETHER OR NOT AT ALL ────────────────
@@ -149,6 +155,8 @@ function ShopContent({
   categoryBreadcrumbLabel,
   categorySeoLanding,
   categorySeoLandingBottom,
+  brandLabel,
+  productHeadingOverride,
   serverQuery,
   facets,
   serverPagination,
@@ -1397,11 +1405,11 @@ function ShopContent({
     </p>
   ) : null;
 
-  const semanticProductHeading = currentBrand
+  const semanticProductHeading = productHeadingOverride ?? (currentBrand
     ? genericBrand?.heading ?? `Produits ${currentBrand.designation_fr}`
     : initialCategory
       ? `Produits ${categoryBreadcrumbLabel?.trim() || taxonomyLabel(initialCategory)}`
-      : 'Produits de la boutique';
+      : 'Produits de la boutique');
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -1455,7 +1463,7 @@ function ShopContent({
           if (initialBrand) {
             const brand = brands.find(b => b.id === initialBrand) || safeProductsData.brands.find(b => b.id === initialBrand);
             if (brand) {
-              breadcrumbItems.push({ label: brand.designation_fr });
+              breadcrumbItems.push({ label: brandLabel ?? brand.designation_fr });
             }
           } else if (initialCategory && taxonomyNode(initialCategory)) {
             /*
@@ -1532,10 +1540,13 @@ function ShopContent({
           );
         })()}
 
-        {/* One compact line: category context on the left, catalogue size on the right. */}
+        {/* One compact line: category context on the left, catalogue size on the right. The slot
+            grows (`sm:flex-1`): a brand page's BrandHeader is a bordered card, and without it the
+            card shrank to its text (1090 of 1457px on /optimum-nutrition) with the count floating
+            outside it. A category's top landing is a bare H1, which the width does not change. */}
         {categorySeoLanding && (
           <div className="mb-3 flex flex-col gap-1.5 sm:mb-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
-            <div className="min-w-0">{categorySeoLanding}</div>
+            <div className="min-w-0 sm:flex-1">{categorySeoLanding}</div>
             {listingCount}
           </div>
         )}
@@ -1571,19 +1582,21 @@ function ShopContent({
           </nav>
         )}
 
-        {/* Brand description panel */}
-        {currentBrand && (
+        {/* Brand description panel — /shop's brand filter only. A brand PAGE passes its own header
+            (BrandHeader, shared with the crawler render) as `categorySeoLanding`; this panel used
+            to render under it with a second, raw-name heading and fallback copy the crawler never
+            saw, including an « importés officiellement » claim nothing on the page backed. */}
+        {currentBrand && !categorySeoLanding && (
           <div className="mb-6 sm:mb-8 lg:mb-10 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 md:p-8 lg:p-10 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6 lg:gap-8">
               {currentBrand.logo && (
                 <div className="relative w-20 h-20 sm:w-28 sm:h-28 flex-shrink-0 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm p-2">
                   <Image
                     src={getStorageUrl(currentBrand.logo)}
-                    alt={currentBrand.designation_fr}
+                    alt={buildBrandAlt(currentBrand.designation_fr)}
                     fill
                     className="object-contain"
                     sizes="(max-width: 640px) 80px, 112px"
-                    priority
                   />
                 </div>
               )}
@@ -2081,7 +2094,7 @@ function ShopContent({
             )}
           </section>
         </div>
-        {genericBrand && products.length === 0 && categorySeoLandingBottom && (
+        {(genericBrand || initialBrand) && products.length === 0 && categorySeoLandingBottom && (
           <div className="mt-8">{categorySeoLandingBottom}</div>
         )}
       </main>

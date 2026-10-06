@@ -13,6 +13,7 @@ import { PageHeader } from '@/app/components/PageHeader';
 import { BlogCard } from '@/app/(shop)/blog/BlogCard';
 import { BlogPager } from '@/app/(shop)/blog/BlogPager';
 import { EmptyState } from '@/app/components/EmptyState';
+import { seoRobots } from '@/util/robotsDirectives';
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -50,10 +51,11 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
       title,
       description,
       alternates: { canonical },
-      robots: {
-        index: data.category.seo?.robots?.index ?? page === 1,
-        follow: data.category.seo?.robots?.follow ?? true,
-      },
+      // seoRobots keeps max-image-preview:large on the googlebot line — see util/robotsDirectives.ts.
+      robots: seoRobots(
+        data.category.seo?.robots?.index ?? page === 1,
+        data.category.seo?.robots?.follow ?? true,
+      ),
       openGraph: {
         title,
         description,

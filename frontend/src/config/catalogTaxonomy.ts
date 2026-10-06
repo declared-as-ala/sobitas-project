@@ -64,6 +64,23 @@ export interface TaxonomyNode {
   nav?: boolean;
   /** Why this node is where it is, when the API disagrees. Read by the guard script. */
   note?: string;
+  /**
+   * The survivor slug when this node is the same shelf twice (defect 3 above). A duplicate keeps
+   * its URL and its `noindex, follow`, and is linked ONLY from its twin — so code that builds
+   * links from a listing (a brand's family index) skips it instead of linking a noindex page
+   * under a back-office label.
+   */
+  duplicateOf?: string;
+  /**
+   * What ONE PRODUCT on this shelf is, when `label` names the theme the node heads (defect 4).
+   * `collagene` heads « Articulations & bien-être » in the nav, but a product filed under it is
+   * collagen. A brand page names its families from its products, so it reads this first
+   * (taxonomyFamilyLabel): the theme label put « Articulations & bien-être » where live titles
+   * said « Collagène », pushed 34 generic brand titles past 60 characters and dropped the
+   * category from all of them (measured on the live API, 06/10/2026). Nav, breadcrumbs and
+   * category pages keep `label`.
+   */
+  familyLabel?: string;
 }
 
 /**
@@ -108,6 +125,7 @@ export const catalogTaxonomy: TaxonomyNode[] = [
         slug: 'glucides-energie',
         label: 'Glucides & énergie (ancien)',
         nav: false,
+        duplicateOf: 'glucides',
         note: 'duplicate shelf of /glucides, 24 products none in stock — linked only from its twin',
       },
     ],
@@ -174,6 +192,7 @@ export const catalogTaxonomy: TaxonomyNode[] = [
       {
         slug: 'vitamines',
         label: 'Vitamines & minéraux',
+        familyLabel: 'Vitamines',
         children: [
           { slug: 'mineraux', label: 'Minéraux', note: '2 clicks — protected by traffic' },
           { slug: 'magnesium', label: 'Magnésium' },
@@ -184,6 +203,7 @@ export const catalogTaxonomy: TaxonomyNode[] = [
       {
         slug: 'collagene',
         label: 'Articulations & bien-être',
+        familyLabel: 'Collagène',
         note: 'the rayon best page (10 clicks @19.6) heads the theme it actually sells into',
         children: [
           { slug: 'omega-3', label: 'Oméga 3' },
@@ -195,6 +215,7 @@ export const catalogTaxonomy: TaxonomyNode[] = [
       {
         slug: 'immunite',
         label: 'Immunité & digestion',
+        familyLabel: 'Immunité',
         nav: false,
         note: 'every leaf of this theme is currently unbuyable; kept whole under the rayon page',
         children: [
@@ -207,6 +228,7 @@ export const catalogTaxonomy: TaxonomyNode[] = [
       {
         slug: 'boosters-hormonaux',
         label: 'Plantes & boosters',
+        familyLabel: 'Boosters hormonaux',
         children: [
           { slug: 'ashwagandha', label: 'Ashwagandha' },
           { slug: 'tribulus', label: 'Tribulus' },
@@ -272,6 +294,12 @@ export function taxonomyNode(slug: string): TaxonomyNode | null {
 /** The declared label, falling back to whatever the caller already had. */
 export function taxonomyLabel(slug: string, fallback?: string): string {
   return index.get(slug)?.node.label ?? (fallback ?? slug);
+}
+
+/** The name of a product family filed on this shelf: `familyLabel` on a theme node, else the label. */
+export function taxonomyFamilyLabel(slug: string, fallback?: string): string {
+  const node = index.get(slug)?.node;
+  return node?.familyLabel ?? node?.label ?? (fallback ?? slug);
 }
 
 /** Rayon → … → immediate parent. Empty for a rayon or an unknown slug. */

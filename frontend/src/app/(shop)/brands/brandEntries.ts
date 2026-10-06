@@ -1,8 +1,9 @@
 import type { Brand } from '@/types';
+import { brandDisplayName, brandLogoAlt } from '@/util/brandDisplayName';
 import { brandNameToSlug } from '@/util/brandSlug';
 
 /**
- * ONE brand, reduced to the six fields the directory actually renders.
+ * ONE brand, reduced to the fields the page actually renders.
  *
  * ── WHY A PROJECTION AND NOT `Brand[]` ─────────────────────────────────────────────────────
  * The page hands its list to a client island, so every field on it is paid for twice: once in
@@ -13,23 +14,95 @@ import { brandNameToSlug } from '@/util/brandSlug';
  * and on every crawl, which is the same argument that took the header search from 14 KB a
  * keystroke to 1.8 KB.
  *
- * Single-letter keys were considered and rejected. They would save perhaps 6 KB more and make
- * every call site unreadable; the four dropped fields were the actual weight.
+ * The directory island gets an even narrower `DirectoryEntry` (below): `rawName` and `logo` are
+ * read only by the 24 featured plates and the JSON-LD, so they stay on the server for the other
+ * ~550 rows.
  */
 export interface BrandEntry {
   id: number;
+  /**
+   * The name as a reader should see it — `brandDisplayName`, so 'BIOTECH USA' reads
+   * 'BioTech USA' and 'BIG RAMY LABS' reads 'Big Ramy Labs'. Sort order and the A–Z buckets use
+   * this, because it is the string the reader scans.
+   */
   name: string;
-  /** The slug the brand is SERVED at — `brandNameToSlug`, so overrides are already applied. */
+  /**
+   * The admin's `designation_fr`, untouched. The slug and every JSON-LD `@id` are derived from
+   * THIS, never from `name`: products already reference `https://protein.tn/biotech-usa` as their
+   * brand `@id`, and a display-name rewrite must not be able to move that identifier.
+   */
+  rawName: string;
+  /** The slug the brand is SERVED at — `brandNameToSlug(rawName)`, so overrides are applied. */
   slug: string;
   /** Published products, from `shop_facets.brand_counts`. */
   count: number;
   /** Products that can be shipped today. 0 when none, and see `hasStockData` below. */
   stock: number;
-  /** Storage path, or null. Only ~8% of brands have one — see `FEATURED` in the page. */
+  /** Storage path, or null. Only ~8% of brands have one — see the featured tier. */
   logo: string | null;
+  /**
+   * The plate's alt, resolved here on the server (brandLogoAlt: « Logo {name} », or a curated
+   * override when the admin file is not the wordmark) so the client island never imports the
+   * curated config. Set only when there is a logo.
+   */
+  logoAlt?: string;
   /** The A–Z bucket: an uppercase letter, or '#' for anything that does not start with one. */
   letter: string;
 }
+
+/** What the A–Z island needs, and nothing else. */
+export type DirectoryEntry = Omit<BrandEntry, 'rawName' | 'logo' | 'logoAlt'>;
+
+/** The minimum of an `/all_brands` row this file reads. The page caches exactly this shape. */
+export type BrandRow = Pick<Brand, 'id' | 'designation_fr'> & { logo?: string | null };
+
+/**
+ * The 24 logo plates open on these, in this order: brand-page clicks in Search Console, 28 days
+ * to 05/10/2026, highest first. Every one has a logo in the admin. Slugs, not names, because the
+ * slug is the stable key — the admin can re-case 'DYMATIZE' tomorrow without moving the page.
+ *
+ * A slug missing from the catalogue (or with no logo) is skipped, not an error: the list is a
+ * PRIORITY, never a promise that the brand exists.
+ */
+export const FEATURED_ORDER: readonly string[] = Object.freeze([
+  'dymatize',
+  'optimum-nutrition',
+  'biotech-usa',
+  'weightworld',
+  'muscletech',
+  'ostrovit',
+  'eric-favre',
+  'proactive',
+  'big-ramy-labs',
+  'william-bonac',
+  'bpi-sports',
+  'ultimate-nutrition',
+  'gsn-great-sport-nutrition',
+  'olimp-sport-nutrition',
+  'universal-nutrition',
+  'kevin-levrone',
+  'challenger-nutrition',
+]);
+
+/** Plates on the page. Was 39 (every brand with a logo); the rest stay in the A–Z list. */
+export const FEATURED_LIMIT = 24;
+
+/**
+ * Brands with real search demand and NO logo in the admin (so no plate): NOW Foods, Nutricost,
+ * Floradix… — /now-foods sits at 4.4 and /floradix at 4.1 in Search Console. They get a text row
+ * under the plates rather than a fake wordmark. Same rules as FEATURED_ORDER: GSC order, slugs,
+ * skipped when absent or empty.
+ */
+export const TEXT_FEATURED_ORDER: readonly string[] = Object.freeze([
+  'now-foods',
+  'rule-one-proteins',
+  'true-sea-moss',
+  'nutricost',
+  'floradix',
+  'doctor-s-best',
+  'one-a-day',
+  'centrum',
+]);
 
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
@@ -67,7 +140,7 @@ function bucketOf(name: string): string {
  * the filter off and hides the counts, and the page degrades to the plain A–Z list it was.
  */
 export function buildBrandEntries(
-  brands: Brand[],
+  brands: ReadonlyArray<BrandRow>,
   brandCounts: Record<string, number>,
   stockCounts: Record<number, number>
 ): { entries: BrandEntry[]; hasCounts: boolean; hasStockData: boolean } {
@@ -77,14 +150,18 @@ export function buildBrandEntries(
   const entries = (Array.isArray(brands) ? brands : [])
     .filter((b) => b && typeof b.designation_fr === 'string' && b.designation_fr.trim().length > 0)
     .map<BrandEntry>((b) => {
-      const name = b.designation_fr.trim();
+      const rawName = b.designation_fr.trim();
+      const slug = brandNameToSlug(rawName);
+      const name = brandDisplayName(rawName, slug) || rawName;
       return {
         id: b.id,
         name,
-        slug: brandNameToSlug(name),
+        rawName,
+        slug,
         count: Number(brandCounts[String(b.id)] ?? 0) || 0,
         stock: Number(stockCounts[b.id] ?? 0) || 0,
         logo: b.logo || null,
+        ...(b.logo ? { logoAlt: brandLogoAlt(rawName, slug) } : {}),
         letter: bucketOf(name),
       };
     })
@@ -94,4 +171,47 @@ export function buildBrandEntries(
     .sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
 
   return { entries, hasCounts, hasStockData };
+}
+
+/**
+ * The logo plates, in the order the page shows them.
+ *
+ * FEATURED_ORDER first (search demand), then whatever is shippable today (in-stock count), then
+ * catalogue depth, then the name — so the tail of the 24 reads as "what you can actually order"
+ * rather than as the first names in the alphabet. `logo != null` stays the gate: a plate with no
+ * artwork is the empty grey square the 19/08 rebuild removed.
+ */
+export function pickFeaturedBrands(entries: ReadonlyArray<BrandEntry>): BrandEntry[] {
+  const rank = new Map(FEATURED_ORDER.map((slug, i) => [slug, i]));
+  const unranked = FEATURED_ORDER.length;
+  return entries
+    .filter((e) => e.logo)
+    .sort(
+      (a, b) =>
+        (rank.get(a.slug) ?? unranked) - (rank.get(b.slug) ?? unranked) ||
+        b.stock - a.stock ||
+        b.count - a.count ||
+        a.name.localeCompare(b.name, 'fr')
+    )
+    .slice(0, FEATURED_LIMIT);
+}
+
+/** The text-only row: TEXT_FEATURED_ORDER brands that exist and have at least one product. */
+export function pickTextFeaturedBrands(entries: ReadonlyArray<BrandEntry>): BrandEntry[] {
+  const bySlug = new Map(entries.map((e) => [e.slug, e]));
+  return TEXT_FEATURED_ORDER.map((slug) => bySlug.get(slug)).filter(
+    (e): e is BrandEntry => Boolean(e && e.count > 0)
+  );
+}
+
+/** Strip the server-only fields before a list crosses into the A–Z client island. */
+export function toDirectoryEntries(entries: ReadonlyArray<BrandEntry>): DirectoryEntry[] {
+  return entries.map(({ id, name, slug, count, stock, letter }) => ({
+    id,
+    name,
+    slug,
+    count,
+    stock,
+    letter,
+  }));
 }

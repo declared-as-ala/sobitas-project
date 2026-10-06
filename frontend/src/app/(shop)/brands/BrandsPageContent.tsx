@@ -1,15 +1,17 @@
 import { ArrowRight, MessageCircle, Search, Store, Truck } from 'lucide-react';
 import Link from 'next/link';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
+import { ShopBreadcrumbs } from '@/app/components/ShopBreadcrumbs';
 import { Section } from '@/app/components/layout/Section';
 import { SectionHeader } from '@/app/components/SectionHeader';
-import { LEGAL_IDENTITY } from '@/util/company';
+import { DELIVERY, LEGAL_IDENTITY } from '@/util/company';
 import { BrandDirectory } from './BrandDirectory';
 import { FeaturedBrands } from './FeaturedBrands';
-import type { BrandEntry } from './brandEntries';
+import { toDirectoryEntries, type BrandEntry } from './brandEntries';
+import type { BrandRayon, BrandStock } from './brandRayons';
 
 /**
- * /brands, rebuilt.
+ * /brands.
  *
  * ── THE BRIEF ──────────────────────────────────────────────────────────────────────────────
  * Owner, 19/08/2026, with a full-page screenshot: *"the brands page looks glorious, disgusting …
@@ -18,98 +20,294 @@ import type { BrandEntry } from './brandEntries';
  * /brands page, make it better performance and easy for users to see what brands we have, make
  * it the best for the SEO also, add some content from you."*
  *
- * ── WHAT THE PAGE WAS ──────────────────────────────────────────────────────────────────────
- * 589 aspect-square logo cards on a 1,024px rail inside a 1,536px window. 40,207px tall at
- * desktop, 81,851px on a phone, 11,952 DOM nodes — and 90% of the cards had no logo to show,
- * because only 57 brands in the catalogue have artwork. See BrandDirectory for the full reading.
- *
- * ── THE SHAPE IT TAKES INSTEAD ─────────────────────────────────────────────────────────────
+ * ── THE SHAPE ──────────────────────────────────────────────────────────────────────────────
  * The hybrid that large-catalogue retailers converge on, and that NN/G describes in "Traditional
  * and Hybrid Category Pages": a small FEATURED tier that shows what the shop is known for, over
- * a dense ALPHABETICAL INDEX that carries everything, with in-page anchors ("Anchors OK?
- * Re-Assessing In-Page Links" — Saks' designer index is the cited case).
+ * a dense ALPHABETICAL INDEX that carries everything, with in-page anchors.
  *
- *   1. Hero          the numbers, the search entry point, and the page's one dark surface
- *   2. En vedette    45 logo plates — the sports-nutrition roster
- *   3. Répertoire    577 text rows, A–Z, with counts and availability
- *   4. Repères       how to read the page, and the brands people actually ask for
- *   5. Questions     original Q&A, also emitted as FAQPage
+ *   1. Fil d’Ariane    Accueil › Marques — rendered, because the BreadcrumbList says it is
+ *   2. Hero            the H1, the numbers, the page's one dark object
+ *   3. Marques phares  24 logo plates (search demand first) + a text row for logo-less demand
+ *   4. Par rayon       8 category cards — the page's only links INTO the money categories
+ *   5. Répertoire      every brand, A–Z, with counts and availability
+ *   6. Acheter         three practical cards, every delivery figure from DELIVERY
+ *   7. Questions       the FAQ, also emitted as FAQPage, then the closing call to action
+ *
+ * ── WHAT THE 05/10/2026 PASS CHANGED, AND WHY ──────────────────────────────────────────────
+ * /brands climbed from 48.1 to 17.7 in 28 days and sits #5 for `marques protéine tunisie`. Google
+ * ignored the meta description and built the snippet from the featured band's subtitle plus the
+ * FIRST LOGO'S ALT — « JX FITNESS — marque de compléments alimentaires en Tunisie… », a gym-
+ * equipment brand described as a supplement brand. So: the H1 and intro now say what the page
+ * is in the words people search, the plates open on the brands people actually click, the alts
+ * are « Logo {Marque} », and the « Repères » band lost its hand-written brand notes — five of
+ * them named products the catalogue does not carry (Outlift, Anabol, Animal Flex, OstroVit
+ * bêta-alanine, BioTech packs: 0 references each, checked against the live API).
  *
  * ── ON "WE ARE NOT USING ANY BLACK THINGS" ─────────────────────────────────────────────────
- * tokens.css v6 bans a full-width dark CONTENT band above the footer, and the ban is not
- * decorative: v5 painted six of them and the owner's own words about that page were that it hurt
- * to look at. The budget it sets is ~12% of painted area above the footer.
- *
- * So the black arrives as OBJECTS rather than as bands — the hero plate and the closing plate,
- * two `.pt-slab` panels inset in the rail, the same way the header's utility bar and the products
- * dropdown are dark without being bands. Measured after: ~8% of the document. The featured tier
- * deliberately stays light, because a brand logo is artwork somebody else's designer set on
- * white, and 45 of them on near-black is 45 logos with a halo.
+ * tokens.css v6 bans a full-width dark CONTENT band above the footer. The black arrives as
+ * OBJECTS — the hero plate and the closing plate, two `.pt-slab` panels inset in the rail. The
+ * featured tier stays light, because a brand logo is artwork somebody else's designer set on
+ * white.
  */
 
 /**
- * One line per brand, written by hand, keyed by the EXACT `designation_fr` in the admin.
+ * « Les marques par rayon » — eight cards, each a category page and the brands that fill it.
  *
- * ── WHY A KEYED MAP AND NOT GENERATED TEXT ─────────────────────────────────────────────────
- * This is the page's only prose about third parties, so every sentence has to be a statement
- * somebody can check — what the brand is known for in this shop's aisles, not invented corporate
- * history and never a health claim. A brand with no entry here simply does not appear in that
- * band; it is still in the directory and still linked. That is the failure mode you want from
- * editorial copy: missing, never wrong.
+ * ── WHY IT LIVES IN THIS FILE AND NOT IN `BrandRayons.tsx` ─────────────────────────────────
+ * Its loader is `brandRayons.ts`. A sibling `BrandRayons.tsx` differs from it only in case, and on
+ * a case-insensitive disk (every Windows checkout of this repo) TypeScript resolves
+ * `./BrandRayons` to the `.ts` loader first: TS1149, and the component "has no export". So the
+ * component is here, one import away from nothing.
+ *
+ * SERVER COMPONENT, on purpose. It is ~60 links and no state: as a client island every one of
+ * them would be paid for twice (HTML + flight payload) on a page whose weight is already the
+ * A–Z directory. Plain `<Link prefetch={false}>` for the same reason the directory uses it — 60
+ * viewport prefetches on a page people scroll through quickly is 60 requests nobody asked for.
+ *
+ * Every number on a card is a count of API rows (see brandRayons.ts). Nothing renders when the
+ * loader returned no rayon, so an API outage costs this band, never the page.
  */
-const BRAND_NOTES: Readonly<Record<string, string>> = Object.freeze({
-  'Optimum Nutrition':
-    'La Gold Standard 100% Whey est le point de repère du rayon protéine — la whey à laquelle toutes les autres se comparent, ici comprise.',
-  'BIOTECH USA':
-    'Marque hongroise très implantée en Europe. Catalogue large : whey, Iso Whey Zero, créatine, vitamines et packs.',
-  MUSCLETECH:
-    'Nitro-Tech et Cell-Tech : des formules dosées haut, orientées prise de masse et force.',
-  DYMATIZE:
-    'ISO 100, une whey isolée et hydrolysée — le choix habituel quand les concentrés passent mal.',
-  'NUTREX RESEARCH':
-    'Outlift, Anabol, Lipo-6 : la partie stimulante du catalogue, pre-workout et brûleurs.',
-  'Real Pharm':
-    'Marque polonaise au rapport qualité-prix serré, sur la whey comme sur les acides aminés.',
-  'Universal Nutrition':
-    'Animal Pak, Animal Flex : des packs quotidiens hérités de la vieille école américaine.',
-  OstroVit:
-    'Beaucoup de formats mono-ingrédient — créatine, bêta-alanine, vitamines — à prix contenu.',
-  Redcon1: 'Une gamme resserrée autour du pre-workout et de la protéine.',
-  'KEVIN LEVRONE': 'Gammes signature de bodybuilding : whey, gainers et acides aminés.',
-});
 
-/** The page's own questions and answers. Rendered visibly AND emitted as FAQPage — Google
- *  requires the two to match, which is why this list is the single source for both. */
-export function brandFaq(brandCount: number): ReadonlyArray<{ q: string; a: string }> { return [
-  {
-    q: 'Combien de marques sont disponibles sur Protein.tn ?',
-    a: `Le répertoire présente ${brandCount} marques. Chaque marque possède sa propre page avec ses produits et les prix en dinars.`,
-  },
-  {
-    q: 'Que signifie le point vert à côté d’une marque ?',
-    a: "Il indique qu'au moins un produit de cette marque peut être expédié aujourd'hui. Le nombre affiché à droite du nom est, lui, le total des produits publiés sous cette marque — une référence peut être publiée et momentanément indisponible.",
-  },
-  {
-    q: 'Comment trouver rapidement une marque précise ?',
-    a: "Utilisez le champ de recherche du répertoire : il filtre les marques à la frappe, sans accent ni casse à respecter. Vous pouvez aussi cliquer une lettre dans l'index A–Z pour sauter directement à cette section.",
-  },
-  {
-    q: 'Les produits vendus sont-ils authentiques ?',
-    a: `Tous les produits sont importés et vendus par ${LEGAL_IDENTITY.shortLegalName} (registre de commerce ${LEGAL_IDENTITY.registreCommerce}), société enregistrée à ${LEGAL_IDENTITY.city} et active depuis ${LEGAL_IDENTITY.foundedYear}. Vous pouvez voir les produits et retirer votre commande directement en boutique.`,
-  },
-  {
-    q: 'Et si ma marque n’est pas dans la liste ?',
-    a: "Écrivez-nous : nous sourçons régulièrement de nouvelles références à la demande. Indiquez la marque et le produit exact, nous revenons vers vous sur la disponibilité et le délai.",
-  },
-  {
-    q: 'Comment se passe la livraison ?',
-    a: 'Nous livrons les 24 gouvernorats de Tunisie, gratuitement à partir de 300 DT, avec paiement à la livraison. Un numéro de suivi vous est transmis dès l’expédition.',
-  },
-]; }
+/** « 1 produit », « 2 produits ». */
+function plural(n: number, singular: string, pluralForm = `${singular}s`): string {
+  return `${n.toLocaleString('fr-FR')} ${n === 1 ? singular : pluralForm}`;
+}
+
+/**
+ * A rayon label in running text: « whey protéine », « pré-workout » — but « BCAA » stays an
+ * acronym. `toLocaleLowerCase('fr')` alone printed « Tout le rayon bcaa ».
+ */
+export function rayonLabelInSentence(label: string): string {
+  return label
+    .split(' ')
+    .map((word) => (/^[A-Z0-9]{2,}$/.test(word) ? word : word.toLocaleLowerCase('fr')))
+    .join(' ');
+}
+
+export function BrandRayons({
+  rayons,
+  surface = 'base',
+}: {
+  rayons: BrandRayon[];
+  /** Set by the page, which owns the canvas ⇄ sunken alternation. */
+  surface?: 'base' | 'sunken';
+}) {
+  if (rayons.length === 0) return null;
+
+  return (
+    <Section
+      id="rayons"
+      surface={surface}
+      spacing="default"
+      width="wide"
+      aria-labelledby="rayons-titre"
+    >
+      <SectionHeader
+        id="rayons-titre"
+        title="Les marques par rayon"
+        subtitle="Les marques de chaque rayon, celles qui ont du stock aujourd’hui en premier, avec leur nombre de références."
+        scale="2"
+      />
+
+      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {rayons.map((rayon) => (
+          <li
+            key={rayon.slug}
+            className="flex min-w-0 flex-col rounded-xl border border-hairline bg-elevated px-4 pb-2 pt-4"
+          >
+            <h3 className="font-display text-[15px] font-bold uppercase tracking-wide text-ink-1">
+              {rayon.label}
+            </h3>
+            <p className="mt-1 text-[12px] tabular-nums text-ink-3">
+              {plural(rayon.brandCount, 'marque')} · {plural(rayon.productCount, 'produit')}
+            </p>
+
+            <ul className="mt-2 flex-1">
+              {rayon.brands.map((brand) => (
+                <li key={brand.id} className="border-b border-hairline">
+                  <Link
+                    href={`/${brand.slug}`}
+                    prefetch={false}
+                    className="group flex min-h-11 items-center rounded-md py-1.5 text-[13.5px] leading-snug focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                  >
+                    <span className="min-w-0">
+                      <span className="font-semibold text-ink-1 transition-colors group-hover:text-brand">
+                        {brand.name}
+                      </span>
+                      <span className="tabular-nums text-ink-3">
+                        {` — ${plural(brand.count, 'produit')}`}
+                      </span>
+                      {brand.inStock > 0 && (
+                        <span className="font-semibold tabular-nums text-ok">
+                          {` (${brand.inStock.toLocaleString('fr-FR')} en stock)`}
+                        </span>
+                      )}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+
+            <Link
+              href={rayon.url}
+              prefetch={false}
+              className="group mt-1 inline-flex min-h-11 items-center gap-1.5 self-start rounded-md text-[13px] font-semibold text-brand transition-colors hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              Tout le rayon {rayonLabelInSentence(rayon.label)}
+              <ArrowRight
+                className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
+                aria-hidden="true"
+              />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
+/** The page's one H1, also the CollectionPage `name` in page.tsx — one string, two places. */
+export const BRANDS_H1 = 'Marques de protéines et compléments en Tunisie';
+
+type FaqItem = { q: string; a: string };
+
+/** « A, B et C ». */
+function joinFr(items: ReadonlyArray<string>): string {
+  if (items.length <= 1) return items[0] ?? '';
+  return `${items.slice(0, -1).join(', ')} et ${items[items.length - 1]}`;
+}
+
+function references(n: number): string {
+  return `${n.toLocaleString('fr-FR')} référence${n === 1 ? '' : 's'}`;
+}
+
+/** « Optimum Nutrition (25 références), MuscleTech (11) et … » — the unit once, then bare counts. */
+function leaderList(
+  brands: ReadonlyArray<{ name: string; count: number }>,
+  unitOnFirst: boolean
+): string {
+  return joinFr(
+    brands.map((b, i) =>
+      i === 0 && unitOnFirst ? `${b.name} (${references(b.count)})` : `${b.name} (${b.count.toLocaleString('fr-FR')})`
+    )
+  );
+}
+
+/**
+ * The page's own questions and answers. Rendered visibly AND emitted as FAQPage — Google
+ * requires the two to match, which is why page.tsx calls this ONCE and hands the same array to
+ * both. Every number comes from the API reads the page already made; a clause whose data is
+ * missing is dropped rather than written with a guess.
+ *
+ * « Les plus fournies » is read from `rayon.leaders`, which is sorted by REFERENCE COUNT — the
+ * only order in which that phrase is true. The cards rank by stock; see brandRayons.ts.
+ */
+export function brandFaq(
+  entries: ReadonlyArray<BrandEntry>,
+  rayons: ReadonlyArray<BrandRayon>,
+  stock: BrandStock
+): FaqItem[] {
+  const faq: FaqItem[] = [];
+  const brandCount = entries.length;
+  const stockKnown = Object.keys(stock.byBrand).length > 0;
+  const inStockBrands = entries.filter((e) => e.stock > 0).length;
+  const rayon = (slug: string) => rayons.find((r) => r.slug === slug);
+
+  // Q1 — the count. Skipped outright when the brand list failed: « 0 marques » is not an answer.
+  if (brandCount > 0) {
+    faq.push({
+      q: 'Combien de marques trouve-t-on sur Protein.tn ?',
+      a:
+        `${brandCount.toLocaleString('fr-FR')} marques de protéines et de compléments alimentaires sont au catalogue` +
+        (stockKnown && inStockBrands > 0
+          ? `, dont ${inStockBrands.toLocaleString('fr-FR')} avec au moins un produit en stock aujourd’hui`
+          : '') +
+        '. Chaque marque a sa page avec toutes ses références et leur prix en dinars.',
+    });
+  }
+
+  // Q2 — whey. Two clauses, each dropped when its rayon did not load; the question goes with both.
+  const whey = rayon('whey-proteine');
+  const isolate = rayon('whey-isolate');
+  const wheyClauses: string[] = [];
+  if (whey && whey.leaders.length > 0) {
+    const label = rayonLabelInSentence(whey.label);
+    wheyClauses.push(
+      whey.leaders.length === 1
+        ? `Au rayon ${label}, la marque la plus fournie est ${leaderList(whey.leaders, true)}.`
+        : `Au rayon ${label}, les marques les plus fournies sont ${leaderList(whey.leaders, true)}.`
+    );
+  }
+  if (isolate && isolate.leaders.length > 0) {
+    wheyClauses.push(
+      `En ${rayonLabelInSentence(isolate.label)} : ${leaderList(isolate.leaders.slice(0, 2), wheyClauses.length === 0)}.`
+    );
+  }
+  if (wheyClauses.length > 0) {
+    faq.push({
+      q: 'Quelles marques de whey protéine trouve-t-on sur Protein.tn ?',
+      a: wheyClauses.join(' '),
+    });
+  }
+
+  // Q3 — creatine, then what of it ships today. The stock clause lists brands in the card's own
+  // order (stock first) and says « entre autres » when more brands have stock than it names.
+  const creatine = rayon('creatine');
+  if (creatine && creatine.leaders.length > 0) {
+    const label = rayonLabelInSentence(creatine.label);
+    const verb = creatine.leaders.length === 1 ? 'est la plus fournie' : 'sont les plus fournies';
+    let answer = `Au rayon ${label}, ${leaderList(creatine.leaders, true)} ${verb}`;
+    const named = creatine.brands.filter((b) => b.inStock > 0).slice(0, 3);
+    if (stockKnown && named.length > 0) {
+      const withStock = Object.values(stock.byCategory[creatine.slug] ?? {}).filter((n) => n > 0).length;
+      const more = withStock > named.length ? ', entre autres' : '';
+      answer += ` ; en stock aujourd’hui${more} : ${joinFr(named.map((b) => b.name))}`;
+    }
+    faq.push({ q: 'Quelles marques de créatine sont disponibles ?', a: `${answer}.` });
+  }
+
+  faq.push(
+    {
+      q: 'Les produits vendus sont-ils authentiques ?',
+      a: `Tous les produits sont importés et vendus par ${LEGAL_IDENTITY.shortLegalName} (registre de commerce ${LEGAL_IDENTITY.registreCommerce}), société enregistrée à ${LEGAL_IDENTITY.city} et active depuis ${LEGAL_IDENTITY.foundedYear}. Vous pouvez voir les produits et retirer votre commande directement en boutique.`,
+    },
+    {
+      q: 'Et si ma marque n’est pas dans la liste ?',
+      a: "Écrivez-nous : nous sourçons régulièrement de nouvelles références à la demande. Indiquez la marque et le produit exact, nous revenons vers vous sur la disponibilité et le délai.",
+    },
+    {
+      q: 'Comment se passe la livraison ?',
+      a:
+        `Livraison en ${DELIVERY.windowLabel} dans les 24 gouvernorats : ${DELIVERY.feeDt} DT, offerte dès ${DELIVERY.freeFromDt} DT` +
+        (DELIVERY.cashOnDelivery ? ', avec paiement à la livraison' : '') +
+        '. Un numéro de suivi vous est transmis dès l’expédition.',
+    }
+  );
+
+  return faq;
+}
+
+/**
+ * Surfaces after the hero, in render order. Alternation is canvas ⇄ sunken and the hero is
+ * canvas, so the first band after it is sunken. Computed rather than written per band because
+ * two of the bands are conditional: if the rayon read fails, the plates and the directory would
+ * otherwise be two adjacent sunken bands with no seam between them.
+ */
+type BandKey = 'featured' | 'rayons' | 'directory' | 'buy' | 'faq';
+function bandSurfaces(present: ReadonlyArray<BandKey>): Record<BandKey, 'sunken' | 'base'> {
+  const out = {} as Record<BandKey, 'sunken' | 'base'>;
+  present.forEach((key, i) => {
+    out[key] = i % 2 === 0 ? 'sunken' : 'base';
+  });
+  return out;
+}
 
 interface BrandsPageContentProps {
   entries: BrandEntry[];
   featured: BrandEntry[];
+  textFeatured: BrandEntry[];
+  rayons: BrandRayon[];
+  faq: ReadonlyArray<FaqItem>;
   hasCounts: boolean;
   hasStockData: boolean;
   totalProducts: number;
@@ -119,24 +317,41 @@ interface BrandsPageContentProps {
 export function BrandsPageContent({
   entries,
   featured,
+  textFeatured,
+  rayons,
+  faq,
   hasCounts,
   hasStockData,
   totalProducts,
   inStockBrandCount,
 }: BrandsPageContentProps) {
   const fmt = (n: number) => n.toLocaleString('fr-FR');
-
-  const highlighted = featured
-    .filter((b) => BRAND_NOTES[b.name])
-    .slice(0, 8);
+  const hasFeatured = featured.length > 0 || textFeatured.length > 0;
+  const surfaces = bandSurfaces(
+    [
+      hasFeatured ? 'featured' : null,
+      rayons.length > 0 ? 'rayons' : null,
+      'directory',
+      'buy',
+      'faq',
+    ].filter((k): k is BandKey => k !== null)
+  );
 
   return (
-    <>
+    /* The storefront layout renders header and footer only, so this is the page's one <main>. */
+    <main>
+      {/* `strip` is the one-row band step, and `first` because this row sits against the header —
+          the hero band below keeps its own `first` and draws no seam, which is right: a crumb row
+          and the page head it introduces read as one block. The visible labels « Accueil » and
+          « Marques » are the BreadcrumbList names in page.tsx, character for character. */}
+      <Section spacing="strip" width="wide" first>
+        <ShopBreadcrumbs items={[{ label: 'Marques' }]} />
+      </Section>
+
       {/*
-        ── BAND 1 · THE PLATE ──────────────────────────────────────────────────────────────
+        ── THE PLATE ─────────────────────────────────────────────────────────────────────────
         `spacing="tight"` and not `feature`: the plate owns its own internal padding, so a band
-        step on top of it is padding twice. The whole hero is ~330px at desktop against the old
-        page's 520px of centred heading, search field and three stat columns.
+        step on top of it is padding twice.
       */}
       <Section spacing="tight" width="wide" first aria-labelledby="marques-titre">
         <div className="pt-slab overflow-hidden rounded-2xl border border-hairline px-5 py-8 sm:rounded-3xl sm:px-8 sm:py-10 lg:px-10">
@@ -149,12 +364,15 @@ export function BrandsPageContent({
                 id="marques-titre"
                 className="font-display font-compressed text-[2rem] font-extrabold uppercase leading-[0.94] tracking-[-0.02em] text-ink-1 lg:text-[3rem]"
               >
-                Marques de protéines et compléments alimentaires
+                {BRANDS_H1}
               </h1>
+              {/* The page's snippet candidate: Google ignored the meta description and quoted
+                  the band under this one. This paragraph now says what the page is first. */}
               <p className="mt-3.5 text-[15px] leading-relaxed text-ink-2">
-                Des références mondiales de la nutrition sportive aux laboratoires de compléments
-                vitaminés. Chaque marque a sa page : catalogue complet, prix en dinars, et
-                livraison dans les 24 gouvernorats.
+                Optimum Nutrition, Dymatize, BioTech USA, MuscleTech… Chaque marque de nutrition
+                sportive (whey, créatine, pré-workout, gainers) et de compléments santé a sa page :
+                catalogue complet et prix en dinars. Livraison dans les 24 gouvernorats, offerte
+                dès {DELIVERY.freeFromDt} DT.
               </p>
 
               <div className="mt-5 flex flex-wrap items-center gap-2.5">
@@ -165,21 +383,21 @@ export function BrandsPageContent({
                   <Search className="h-4 w-4" aria-hidden="true" />
                   Chercher une marque
                 </a>
-                <a
-                  href="#vedette"
-                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-rule px-5 text-[13px] font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand"
-                >
-                  Marques en vedette
-                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </a>
+                {hasFeatured && (
+                  <a
+                    href="#vedette"
+                    className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-rule px-5 text-[13px] font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand"
+                  >
+                    Marques phares
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </a>
+                )}
               </div>
             </div>
 
             {/*
-              THE THREE NUMBERS ARE MEASURED, NOT ROUNDED UP. The old hero printed "589+ Marques ·
-              100% Officielles · Rapide Livraison" — one inflated count and two claims that mean
-              nothing because nothing could ever contradict them. These three come from the same
-              fetches the page below renders, so they cannot drift from it.
+              THE THREE NUMBERS ARE MEASURED, NOT ROUNDED UP. They come from the same fetches the
+              page below renders, so they cannot drift from it.
             */}
             <dl className="flex shrink-0 gap-6 border-t border-rule pt-5 sm:gap-9 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0">
               <div>
@@ -215,22 +433,65 @@ export function BrandsPageContent({
         </div>
       </Section>
 
-      {/* ── BAND 2 · THE LOGO TIER ────────────────────────────────────────────────────────── */}
-      {featured.length > 0 && (
-        <Section id="vedette" surface="sunken" spacing="default" width="wide">
+      {/* ── THE LOGO TIER, THEN THE BRANDS WITH DEMAND AND NO LOGO ─────────────────────────── */}
+      {hasFeatured && (
+        <Section
+          id="vedette"
+          surface={surfaces.featured}
+          spacing="default"
+          width="wide"
+          aria-labelledby="vedette-titre"
+        >
           <SectionHeader
-            title="Marques en vedette"
-            subtitle="Les grandes marques de nutrition sportive du catalogue — protéines, créatine, pre-workout et gainers."
+            id="vedette-titre"
+            title="Nutrition sportive : marques phares"
+            subtitle="Les marques les plus recherchées sur Protein.tn, puis celles qui ont le plus de produits en stock aujourd’hui."
             scale="2"
           />
           <FeaturedBrands brands={featured} />
+
+          {textFeatured.length > 0 && (
+            <div className={featured.length > 0 ? 'mt-6' : undefined}>
+              <h3 className="mb-1 font-display text-[15px] font-bold uppercase tracking-wide text-ink-1">
+                Autres marques phares
+              </h3>
+              <ul className="grid grid-cols-1 gap-x-6 sm:grid-cols-2 lg:grid-cols-4">
+                {textFeatured.map((brand) => (
+                  <li key={brand.id} className="border-b border-hairline">
+                    <Link
+                      href={`/${brand.slug}`}
+                      prefetch={false}
+                      className="group flex min-h-11 items-center gap-1.5 rounded-md py-1.5 text-[13.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                    >
+                      <span className="font-semibold text-ink-1 transition-colors group-hover:text-brand">
+                        {brand.name}
+                      </span>
+                      <span className="tabular-nums text-ink-3">
+                        {` · ${fmt(brand.count)} produit${brand.count === 1 ? '' : 's'}`}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </Section>
       )}
 
-      {/* ── BAND 3 · THE INDEX ────────────────────────────────────────────────────────────── */}
-      <Section id="repertoire" spacing="default" width="wide">
+      {/* ── THE RAYONS: the page's links into the eight money categories ─────────────────── */}
+      <BrandRayons rayons={rayons} surface={surfaces.rayons} />
+
+      {/* ── THE INDEX ─────────────────────────────────────────────────────────────────────── */}
+      <Section
+        id="repertoire"
+        surface={surfaces.directory}
+        spacing="default"
+        width="wide"
+        aria-labelledby="repertoire-titre"
+      >
         <SectionHeader
-          title="Répertoire des marques"
+          id="repertoire-titre"
+          title="Répertoire des marques de A à Z"
           subtitle={
             hasCounts
               ? 'Toutes les marques ayant au moins un produit publié, classées de A à Z. Le nombre à droite est le total de produits ; le point vert signale une disponibilité immédiate.'
@@ -239,23 +500,24 @@ export function BrandsPageContent({
           scale="2"
         />
         <BrandDirectory
-          entries={entries}
+          entries={toDirectoryEntries(entries)}
           hasCounts={hasCounts}
           hasStockData={hasStockData}
           inStockBrandCount={inStockBrandCount}
+          surface={surfaces.directory}
         />
       </Section>
 
-      {/* ── BAND 4 · THE EDITORIAL ────────────────────────────────────────────────────────── */}
-      <Section surface="sunken" spacing="default" width="wide">
-        <SectionHeader title="Repères" scale="3" />
+      {/* ── BUYING ────────────────────────────────────────────────────────────────────────── */}
+      <Section surface={surfaces.buy} spacing="default" width="wide" aria-labelledby="acheter-titre">
+        <SectionHeader id="acheter-titre" title="Acheter vos marques sur Protein.tn" scale="3" />
 
         <div className="grid gap-3 sm:grid-cols-3">
           {[
             {
               icon: Store,
               title: 'Deux catalogues, une seule liste',
-              body: 'La nutrition sportive — whey, créatine, pre-workout, gainers — et les compléments de santé : vitamines, minéraux, oméga 3, plantes. Les deux familles cohabitent dans ce répertoire, et les marques en vedette ci-dessus sont la première.',
+              body: 'La nutrition sportive — whey, créatine, pré-workout, gainers — et les compléments santé : vitamines, minéraux, oméga 3, plantes. Les deux familles cohabitent dans ce répertoire, classées de A à Z et par rayon.',
             },
             {
               icon: Search,
@@ -265,7 +527,10 @@ export function BrandsPageContent({
             {
               icon: Truck,
               title: 'Commander, où que vous soyez',
-              body: 'Livraison dans les 24 gouvernorats, gratuite à partir de 300 DT, paiement à la livraison. La boutique physique est à Sousse si vous préférez voir le produit avant de l’acheter.',
+              body:
+                `Livraison en ${DELIVERY.windowLabel} dans les 24 gouvernorats : ${DELIVERY.feeDt} DT, offerte dès ${DELIVERY.freeFromDt} DT` +
+                (DELIVERY.cashOnDelivery ? ', paiement à la livraison' : '') +
+                `. La boutique physique est à ${LEGAL_IDENTITY.city} si vous préférez voir le produit avant de l’acheter.`,
             },
           ].map(({ icon: Icon, title, body }) => (
             <div key={title} className="rounded-2xl border border-hairline bg-elevated p-5">
@@ -279,53 +544,24 @@ export function BrandsPageContent({
             </div>
           ))}
         </div>
-
-        {highlighted.length > 0 && (
-          <div className="mt-6">
-            <h3 className="mb-3 font-display font-compressed text-[1.375rem] font-extrabold uppercase leading-none tracking-[-0.01em] text-ink-1 lg:text-[1.75rem]">
-              Les marques dont on nous parle le plus
-            </h3>
-            <ul className="grid gap-x-8 gap-y-0 sm:grid-cols-2">
-              {highlighted.map((brand) => (
-                <li key={brand.id} className="border-b border-hairline py-3">
-                  <Link
-                    href={`/${brand.slug}`}
-                    prefetch={false}
-                    className="group inline-flex items-center gap-1.5 font-display text-[14px] font-bold uppercase tracking-wide text-ink-1 transition-colors hover:text-brand"
-                  >
-                    {brand.name}
-                    <ArrowRight
-                      className="h-3.5 w-3.5 shrink-0 text-ink-3 transition-transform group-hover:translate-x-0.5 group-hover:text-brand"
-                      aria-hidden="true"
-                    />
-                  </Link>
-                  <p className="mt-1 text-[13.5px] leading-relaxed text-ink-2">
-                    {BRAND_NOTES[brand.name]}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </Section>
 
-      {/* ── BAND 5 · QUESTIONS, THEN THE CLOSE ────────────────────────────────────────────── */}
-      <Section spacing="default" width="wide" last>
-        <SectionHeader title="Questions fréquentes" scale="3" />
+      {/* ── QUESTIONS, THEN THE CLOSE ─────────────────────────────────────────────────────── */}
+      <Section surface={surfaces.faq} spacing="default" width="wide" last aria-labelledby="faq-titre">
+        <SectionHeader id="faq-titre" title="Questions fréquentes" scale="3" />
 
         {/*
-          `<details>` rather than a state hook: this band is six paragraphs of static copy on a
-          page that already ships one client island, and an accordion is the one interaction the
-          platform does natively. It also means the answers are in the DOM for a crawler with the
-          markup Google expects beside the FAQPage block, open or closed.
+          `<details>` rather than a state hook: static copy, and an accordion is the one
+          interaction the platform does natively. The answers are in the DOM for a crawler, open
+          or closed, beside the FAQPage block built from this same array.
         */}
         <div className="grid gap-2 lg:grid-cols-2">
-          {brandFaq(entries.length).map(({ q, a }) => (
+          {faq.map(({ q, a }) => (
             <details
               key={q}
               className="group rounded-2xl border border-hairline bg-elevated px-4 py-3 [&[open]]:border-brand/30"
             >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[14px] font-semibold text-ink-1 marker:hidden [&::-webkit-details-marker]:hidden">
+              <summary className="-my-3 flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-[14px] font-semibold text-ink-1 marker:hidden [&::-webkit-details-marker]:hidden">
                 {q}
                 <span
                   className="relative h-4 w-4 shrink-0 text-ink-3 transition-colors group-open:text-brand"
@@ -363,9 +599,9 @@ export function BrandsPageContent({
         </div>
       </Section>
 
-      {/* The directory is 13,948px tall on a phone even after this rebuild — a page where a
-          reader who has scrolled to R genuinely needs a way back. */}
+      {/* The directory is ~14,000px tall on a phone — a reader who has scrolled to R genuinely
+          needs a way back. */}
       <ScrollToTop />
-    </>
+    </main>
   );
 }

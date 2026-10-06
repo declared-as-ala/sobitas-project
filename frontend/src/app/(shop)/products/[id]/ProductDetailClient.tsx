@@ -64,6 +64,7 @@ import {
 import { cn } from '@/app/components/ui/utils';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 import { humanProductHeading } from '@/util/productMetaDescription';
+import { productImageAltFor } from '@/util/productAlt';
 import { findInStockSibling } from '@/util/inStockSibling';
 import { getProductLink } from '@/util/productUrl';
 import { getPriceDisplay } from '@/util/productPrice';
@@ -528,7 +529,13 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     return () => observer.disconnect();
   }, []);
 
-  const imageAltBase = (product.seo?.image_alt || product.alt_cover || product.designation_fr || 'Produit').trim();
+  /*
+   * Every photograph's alt, by role, from the one builder the crawler view also uses — so Googlebot
+   * and a shopper read the same string for the same image. The raw `seo.image_alt || alt_cover`
+   * this replaces was the backend template « NAME — Brand — Tunisie »: brand twice, all caps, and
+   * mojibake kept after renames (« OPTI-WOMEN â€“ 120CAPS — … »). See util/productAlt.ts.
+   */
+  const imageAltBase = useMemo(() => productImageAltFor(product), [product]);
   /*
    * ── THE IMPORTED PHOTOGRAPHY, WHICH THIS PAGE HELD AND NEVER SHOWED ─────────────────────────
    *
@@ -1882,7 +1889,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                               >
                                 <Image
                                   src={getStorageUrl(nutritionImages[0])}
-                                  alt={`${product.designation_fr || 'Produit'} — valeurs nutritionnelles`}
+                                  alt={imageAltBase('nutrition', 0, 1)}
                                   width={600}
                                   height={400}
                                   className="w-full h-auto object-contain"
@@ -1911,7 +1918,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                                   >
                                     <Image
                                       src={getStorageUrl(imgPath)}
-                                      alt={`${product.designation_fr || 'Produit'} — valeurs nutritionnelles ${idx + 1}`}
+                                      alt={imageAltBase('nutrition', idx, nutritionImages.length)}
                                       fill
                                       sizes="(max-width: 640px) 50vw, 33vw"
                                       className="object-contain p-1"
@@ -2046,7 +2053,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                             >
                               <Image
                                 src={getStorageUrl(nutritionImages[nutritionLightbox] ?? '')}
-                                alt={`${product.designation_fr || 'Produit'} — valeurs nutritionnelles ${nutritionLightbox + 1}`}
+                                alt={imageAltBase('nutrition', nutritionLightbox, nutritionImages.length)}
                                 width={900}
                                 height={700}
                                 className="max-w-[90vw] max-h-[90vh] w-auto h-auto object-contain rounded-lg shadow-2xl"

@@ -61,7 +61,7 @@ function visit(node) {
 visit(brandAst);
 assert.equal(descriptions.size, targetBrands.length);
 for (const [slug, raw] of descriptions) {
-  assert.match(raw, /^.+\. Dès \{prixMin\} DT, \{nbEnStock\} produits en stock\.$/, `${slug}: one droppable final sentence`);
+  assert.match(raw, /^.+\. Dès \{prixMin\} DT, \{nbEnStock\} (?:produits )?en stock\.$/, `${slug}: one droppable final sentence`);
   const resolved = resolve(raw, { priceMin: 999, inStockCount: 999 });
   assert.ok(resolved.length <= 155, `${slug}: ${resolved.length} characters`);
   assert.equal(resolve(raw, { priceMin: null, inStockCount: 0 }), raw.split('. Dès ')[0] + '.');

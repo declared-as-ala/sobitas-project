@@ -8,6 +8,7 @@ import { getBaseUrl, resolveCanonicalUrl } from '@/util/canonical';
 import { buildWebPageSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { PageContentClient } from './PageContentClient';
 import { getCmsPageTitleOverride } from '@/config/cmsPageSeoConfig';
+import { seoRobots } from '@/util/robotsDirectives';
 
 export type PageProps = {
   params: Promise<{ slug: string }>;
@@ -44,10 +45,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       keywords: page.meta_keywords ?? undefined,
       alternates: { canonical },
-      robots: {
-        index: page.robots_index ?? true,
-        follow: page.robots_follow ?? true,
-      },
+      // Same as the root /{slug} CMS branch: seoRobots keeps max-image-preview:large.
+      robots: seoRobots(page.robots_index ?? true, page.robots_follow ?? true),
       openGraph: {
         title: titleOverride || page.og_title?.trim() || page.meta_title?.trim() || page.title || 'Page',
         description: page.og_description?.trim() || description,
