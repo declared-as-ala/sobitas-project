@@ -163,9 +163,20 @@
 # ── 05/10/2026: the Gold Standard flavour consolidation (shipped 28/09) must keep holding ─────
 # 21 Gold Standard SKUs sit in /whey-proteine and exactly ONE is buyable (2,27 kg, 379 DT, qte 59);
 # the other 20 are qte 0, 11 of them iHerb flavour imports of that very format priced 587 DT.
-# productVariantCanonicals.ts canonicalises 19 of them (11 → the 2,27 kg, 8 → the 908 g) and drops
-# them from the sitemap. Verified live 05/10 on the Rocky Road 2,27 kg: canonical points at the
-# buyable page, robots index,follow, 0 occurrences in products-*.xml. This is the kind of fix that
-# regresses silently — if a flavour URL ever goes self-canonical again, that is the finding.
+# productVariantCanonicals.ts canonicalises 18 of them (11 → the 2,27 kg, 7 → the 908 g) and drops
+# them from the sitemap. (05/10 wrote "19 … 8 → the 908 g"; the config holds 18, counted twice from
+# the file itself on 07/10 — the two targets are not entries.) Verified live 05/10 on the Rocky Road
+# 2,27 kg: canonical points at the buyable page, robots index,follow, 0 occurrences in products-*.xml.
+#
+# RE-VERIFIED IN FULL 07/10, all 18 + both targets: 18/18 carry the mapped canonical, 18/18 are
+# absent from products-0/1/2.xml, and both targets answer 200 index,follow self-canonical and appear
+# exactly once each. The consolidation is healthy.
+#
+# 07/10: this tripwire fired as a FALSE P0 on its first audit — audit-live.mjs demanded a SELF
+# canonical from every page, so a deliberate cross-variant canonical read as "canonical pointing
+# elsewhere". Fixed in the CHECKER, not the page: it now carries a frozen copy of the 18 mappings
+# and asserts the canonical equals the DECLARED target, which still fires if one reverts to self,
+# goes missing or lands on the wrong page. This is the kind of fix that regresses silently — if a
+# flavour URL ever goes self-canonical again, that is the finding.
 /whey-proteine/optimum-nutrition-gold-standard-100-whey-rocky-road-227-kg
 /whey-proteine/100-whey-gold-standard-2-27kg

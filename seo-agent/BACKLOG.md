@@ -6,6 +6,25 @@ lands it, then updates this file. `PLAYBOOK.md` says how; `KEYWORDS.md` says wha
 Legend: `[ ]` open · `[~]` in progress · `[x]` done (one line of what shipped) · `(needs: owner)`
 = cannot be done from the repo (DB row, Google account, credentials) — say it in the run summary.
 
+**State on 07/10/2026:** live audit `--sample=40` 95 URLs **exit 1 — one P0, and it was the
+CHECKER, not the site**: the Gold Standard flavour tripwire that 05/10 deliberately added to
+`watchlist.txt` fired on its first audit, because `audit-live.mjs` demanded a SELF canonical from
+every page and the 28/09 variant consolidation points 18 flavour PDPs at the one page per format the
+shop actually sells. Verified live before touching anything: **18/18 variants carry the mapped
+canonical, 18/18 are absent from `products-*.xml`, both targets answer 200 index,follow
+self-canonical and appear once each** — the consolidation is healthy. Fixed in the checker (frozen
+copy of the 18 mappings, asserts the DECLARED target), audit now **exit 0**. `parity-check.mjs`
+**0 editorial bot-only words** on all five money pages. Robots unchanged. Sitemaps **12,147**,
+Δ **−2** vs 05/10, both explained: `blog` 137 → **136** is 05/10's own landed fix (verified on
+production this morning — the redirecting slug is gone), and `pages` 5 → **4** is the owner's
+`a2978ad` retiring `/proteine-tunisie` (verified live: 308 → `/proteines`). **05/10's owed
+verification PASSED.** Wednesday's planned theme — guide blocks for the buyable whey SKUs —
+**withdrawn on measurement**: not one of the 12 real buyable whey PDPs is thin (**313–1,511
+description words**; the only two the 28/09 run gave guide blocks to were the only two that were
+thin, at ~195), and **all 49 of today's `no FAQPage` P1s are `BackOrder`, zero in-stock**. Five SERP
+rows re-checked (extended). Google: **September 2026 spam update still rolling — attribution mode
+(day 14).**
+
 **State on 05/10/2026:** live audit `--sample=40` 91 URLs **exit 0, 0 P0**; `/sante-vitalite` served
 its transient 5xx on the first of two fetches again and the 02/10 checker fix recorded it **P2**, as
 designed. `parity-check.mjs` **0 editorial bot-only words** on all five money pages. Robots
@@ -341,6 +360,25 @@ record the page-level position first — never act on a query average.
   a file.
 
 ## P1 — the ranking levers (in-stock products first)
+
+- [ ] **`pack-professionnel` is a buyable 699 DT product with NO description at all** (found 07/10
+      while measuring the whey shelf). `qte` 97, `pack: true`, brand Optimum Nutrition, 699 DT from
+      800, and the live page goes straight from the price block to the customer reviews — 0
+      description words, no `aromes`, no `tags`, no `description_cover`. It is the single thinnest
+      buyable page on the whey shelf by a wide margin (the next thinnest is 313 words). **The routine
+      cannot write this one**: a shop-assembled pack has no manufacturer label to source from and the
+      contents are nowhere in the API, so any "ce pack contient…" would be invented. `(needs: owner)`
+      — tell us what is in the pack (or let us read it off a DB field) and the copy is a 10-minute
+      job. It already carries real attested reviews, so the page has trust signals and no text.
+- [ ] **`/collagene` is 254 SKUs with 2 buyable** (measured 07/10 from
+      `productsBySubCategoryId/collagene`), both at **139 DT** against a Tunisian set selling
+      **85–140 DT** — i.e. we are at the top of the band with almost nothing to sell. protein.tn is
+      absent from the whole `collagene tunisie` set, whose 9 of 10 holders are parapharmacies. This
+      is a DEPTH problem, not the `/vitamines` price problem, and no copy fixes it. `(needs: owner)`
+- [ ] **Serious Mass 5 kg: the set undercuts us on the exact SKU** — ~280 DT in the 07/10
+      `mass gainer prix tunisie` set against our **379 DT**. Second SKU after Gold Standard 2,27 kg
+      (379 vs 299–360) where we are the most expensive holder of our own money query. Prices are
+      outside what the routine may touch — this is the number, not a recommendation. `(needs: owner)`
 
 - [ ] **A backend-generated `seo_title` is served as if a person wrote it — ~97 products**
   (measured 30/09 against the real builder). `productTitle()` honours the standing decision "a
