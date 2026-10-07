@@ -36,6 +36,57 @@ const ORIGIN = process.env.BASE_URL || 'https://protein.tn';
 const UA = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
 const here = path.dirname(fileURLToPath(import.meta.url));
 
+/*
+ * ── THE 18 DECLARED CROSS-VARIANT CANONICALS ARE NOT WRONG CANONICALS ──────────────────────────
+ *
+ * `frontend/src/config/productVariantCanonicals.ts` (owner-reviewed, shipped 28/09/2026) points
+ * 18 back-order Gold Standard FLAVOUR imports at the one page per format the shop actually sells,
+ * so Google consolidates the line instead of splitting it across 20 URLs. Those pages stay live
+ * and indexable; only their canonical and their sitemap entry change. The rule below demanded a
+ * SELF-canonical from every page, so each of them read as "canonical pointing elsewhere" = P0.
+ *
+ * 05/10 added the Rocky Road flavour to watchlist.txt as a tripwire — "this is the class of fix
+ * that regresses silently" — and on 07/10 that tripwire fired as a FALSE P0 on its first audit.
+ * Verified live the same morning before changing anything: 18/18 variants carry the mapped
+ * canonical, 0/18 appear in products-*.xml, and both targets answer 200 self-canonical. The
+ * consolidation is healthy; the CHECKER was wrong. Same failure mode, same remedy as the
+ * redirect-source case below and the dead-listing gate above: a P0 that is always red is a P0
+ * nobody reads.
+ *
+ * ── WHY A FROZEN COPY AND NOT AN IMPORT ───────────────────────────────────────────────────────
+ * The same reason title-case-check.mjs freezes `KEEP_UPPER`: a check that reads its expectations
+ * out of the thing it checks cannot catch a DELETION. The config's own header says removing an
+ * entry "reverts that product to a self-canonical on the next render" — so an importing checker
+ * would just expect self, pass, and the consolidation would evaporate unnoticed. Against this
+ * frozen copy the same deletion makes live disagree with expectation and raises a P0, which is
+ * precisely the tripwire 05/10 wanted. It also catches a variant re-pointed at the WRONG target.
+ *
+ * Update this copy only when the consolidation is deliberately changed, and say so in the log.
+ * Copied 07/10/2026: 11 → the 2,27 kg, 7 → the 908 g.
+ */
+const GOLD_STANDARD_227 = '/whey-proteine/100-whey-gold-standard-2-27kg';
+const GOLD_STANDARD_908 = '/whey-proteine/whey-gold-standard-908g';
+const EXPECTED_VARIANT_CANONICALS = new Map([
+  ['optimum-nutrition-gold-standard-100-whey-chocolate-mint-224-kg', GOLD_STANDARD_227],
+  ['optimum-nutrition-gold-standard-100-whey-vanilla-ice-cream-226-kg', GOLD_STANDARD_227],
+  ['optimum-nutrition-gold-standard-100-whey-strawberry-banana-227-kg', GOLD_STANDARD_227],
+  ['optimum-nutrition-gold-standard-100-whey-rocky-road-227-kg', GOLD_STANDARD_227],
+  ['optimum-nutrition-gold-standard-100-whey-protein-french-vanilla-creme-226-kg', GOLD_STANDARD_227],
+  ['optimum-nutrition-gold-standard-100-whey-protein-extreme-milk-chocolate-227-kg', GOLD_STANDARD_227],
+  ['optimum-nutrition-gold-standard-100-whey-protein-double-rich-chocolate-229-kg', GOLD_STANDARD_227],
+  ['optimum-nutrition-gold-standard-100-whey-protein-delicious-strawberry-226-kg', GOLD_STANDARD_227],
+  ['optimum-nutrition-gold-standard-100-whey-chocolate-malt-227-kg', GOLD_STANDARD_227],
+  ['optimum-nutrition-gold-standard-100-whey-banana-cream-227-kg', GOLD_STANDARD_227],
+  ['optimum-nutrition-gold-standard-100-whey-protein-cookies-cream-21-kg', GOLD_STANDARD_227],
+  ['optimum-nutrition-gold-standard-100-whey-protein-vanilla-ice-cream-899-g', GOLD_STANDARD_908],
+  ['optimum-nutrition-gold-standard-100-whey-protein-french-vanilla-creme-907-g', GOLD_STANDARD_908],
+  ['optimum-nutrition-gold-standard-100-whey-protein-extreme-milk-chocolate-907-g', GOLD_STANDARD_908],
+  ['optimum-nutrition-gold-standard-100-whey-protein-double-rich-chocolate-899-g', GOLD_STANDARD_908],
+  ['optimum-nutrition-gold-standard-100-whey-protein-delicious-strawberry-907-g', GOLD_STANDARD_908],
+  ['optimum-nutrition-gold-standard-100-whey-protein-strawberry-banana-907-g', GOLD_STANDARD_908],
+  ['optimum-nutrition-gold-standard-100-whey-cookies-cream-837-g', GOLD_STANDARD_908],
+]);
+
 const argv = process.argv.slice(2);
 const json = argv.includes('--json');
 const sampleArg = argv.find((a) => a.startsWith('--sample='));
@@ -282,15 +333,32 @@ async function probe(pathname) {
     else
       out.problems.push(['P0', `robots "${out.robots}"`]);
   }
+  /*
+   * Compare against the URL actually served, not the one asked for. A watch URL may be a
+   * deliberate redirect SOURCE — `/Intra-Workout/<p>` is in watchlist.txt precisely to prove it
+   * 301s once and stops — and there the correct canonical is the redirect TARGET. Comparing to
+   * `pathname` made that correct page a P0 every single day, and a P0 that is always red is a P0
+   * nobody reads. Where nothing redirects, finalAbsolute === ORIGIN + pathname and this is the
+   * same check it always was.
+   *
+   * The ONE exception is a product the shop has deliberately consolidated into another format's
+   * page (see EXPECTED_VARIANT_CANONICALS at the top). There the expectation is not "self" but
+   * "exactly the declared target" — a stricter assertion than the old rule, not a weaker one: it
+   * still fires if the canonical goes missing, reverts to self, or lands on the wrong page.
+   */
+  const servedSlug = (out.finalUrl || pathname).replace(/\/+$/, '').split('/').pop().toLowerCase();
+  const declaredVariant = out.kind === 'product' ? EXPECTED_VARIANT_CANONICALS.get(servedSlug) : undefined;
+  const trimSlash = (u) => u.replace(/\/$/, '');
   if (!out.canonical) out.problems.push(['P0', 'no canonical']);
-  // Compare against the URL actually served, not the one asked for. A watch URL may be a
-  // deliberate redirect SOURCE — `/Intra-Workout/<p>` is in watchlist.txt precisely to prove it
-  // 301s once and stops — and there the correct canonical is the redirect TARGET. Comparing to
-  // `pathname` made that correct page a P0 every single day, and a P0 that is always red is a P0
-  // nobody reads. Where nothing redirects, finalAbsolute === ORIGIN + pathname and this is the
-  // same check it always was.
-  else if (out.canonical.replace(/\/$/, '') !== (out.finalAbsolute || ORIGIN + pathname).replace(/\/$/, ''))
-    out.problems.push(['P0', `canonical → ${out.canonical} (served ${out.finalUrl})`]);
+  else {
+    const expected = declaredVariant ? ORIGIN + declaredVariant : (out.finalAbsolute || ORIGIN + pathname);
+    if (trimSlash(out.canonical) !== trimSlash(expected))
+      out.problems.push(['P0', declaredVariant
+        ? `declared variant canonical → ${out.canonical}, expected ${expected} — the 28/09 consolidation regressed`
+        : `canonical → ${out.canonical} (served ${out.finalUrl})`]);
+    else if (declaredVariant)
+      out.problems.push(['P2', `declared variant → ${declaredVariant} (28/09 consolidation, expected)`]);
+  }
   if (!out.title) out.problems.push(['P0', 'no <title>']);
   else if (out.title.length > 65) out.problems.push(['P1', `title ${out.title.length} chars`]);
   if (!out.description) out.problems.push(['P0', 'no meta description']);

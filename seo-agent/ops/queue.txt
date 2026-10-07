@@ -10,3 +10,11 @@
 # sitemaps on its own — no catalog-reindex is needed for a blog.xml membership change, and no
 # resources/seo/products entry was written (the whey product batch is Wednesday's theme, see
 # log/2026-10-05.md "Tomorrow"). A seo-copy-apply with nothing to apply is a wasted VPS run.
+# 2026-10-07: nothing queued on purpose. Today's single change is seo-agent/tools/audit-live.mjs —
+# a checker, not site content: it ships with nothing and needs no VPS task. NO
+# resources/seo/products entry was written, and that is the finding rather than an omission:
+# measured this morning, not one of the 12 real buyable whey PDPs is thin (313-1,511 description
+# words), so the guide blocks Wednesday planned would have been duplicate text on pages that
+# already carry "pourquoi / comment utiliser / pour qui" sections. All 49 of today's no-FAQPage
+# P1s are BackOrder, zero in-stock, so there is no FAQ entry to write either. A seo-copy-apply
+# with nothing to apply is a wasted VPS run.
